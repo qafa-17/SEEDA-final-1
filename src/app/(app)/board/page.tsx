@@ -6,10 +6,10 @@ import { StageNotice } from "@/components/stage-notice";
 export const metadata: Metadata = { title: "Board" };
 
 const columns = [
-  { key: "draft", label: "Draft", hint: "Imported, details still being filled in" },
-  { key: "in_review", label: "In Review", hint: "Waiting on the approver" },
-  { key: "approved", label: "Approved", hint: "Ready to publish" },
-  { key: "published", label: "Published", hint: "Live and verified" },
+  { key: "draft", label: "Draft", hint: "Imported, details still being filled in", bar: "border-t-status-draft", dot: "bg-status-draft" },
+  { key: "in_review", label: "In Review", hint: "Waiting on the approver", bar: "border-t-status-review", dot: "bg-status-review" },
+  { key: "approved", label: "Approved", hint: "Ready to publish", bar: "border-t-status-approved", dot: "bg-status-approved" },
+  { key: "published", label: "Published", hint: "Live and verified", bar: "border-t-status-published", dot: "bg-status-published" },
 ];
 
 export default function BoardPage() {
@@ -27,9 +27,12 @@ export default function BoardPage() {
       <StageNotice stage={5}>Search, filters and live status counts appear once articles are stored in the database.</StageNotice>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {columns.map((c) => (
-          <section key={c.key} aria-labelledby={`col-${c.key}`} className="rounded-lg border border-border bg-surface p-4">
+          <section key={c.key} aria-labelledby={`col-${c.key}`} className={`rounded-lg border border-t-4 border-border bg-surface p-4 ${c.bar}`}>
             <div className="flex items-baseline justify-between">
-              <h2 id={`col-${c.key}`} className="font-semibold">{c.label}</h2>
+              <h2 id={`col-${c.key}`} className="flex items-center gap-2 font-semibold">
+                <span aria-hidden className={`h-2.5 w-2.5 rounded-full ${c.dot}`} />
+                {c.label}
+              </h2>
               <span className="text-sm text-muted">0</span>
             </div>
             <p className="mt-1 text-xs text-muted">{c.hint}</p>

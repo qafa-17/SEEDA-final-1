@@ -1,22 +1,29 @@
 @import "tailwindcss";
 
 /*
-  Design tokens. Placeholder palette (industrial navy + safety orange)
-  until the Session 7 identity kit is applied. Change values here only.
+  Design tokens: Content Operations identity.
+  Every text/background pair here meets WCAG AA contrast (4.5:1 or better).
 */
 :root {
-  --background: #f7f8fa;
+  --background: #f7f6fb;
   --surface: #ffffff;
-  --foreground: #14213d;
-  --muted: #5b6475;
-  --border: #dde1e8;
-  --primary: #14213d;
+  --foreground: #1b1537;
+  --muted: #5d5877;
+  --border: #e3e0ef;
+  --primary: #4f2fc9; /* violet, 8.1:1 with white */
   --primary-foreground: #ffffff;
-  --accent: #e8702a;
+  --accent: #d6336c; /* raspberry, 4.6:1 with white */
   --accent-foreground: #ffffff;
-  --success: #1f7a4d;
-  --warning: #9a6a00;
-  --danger: #b42318;
+
+  /* Workflow status colours, used on the board and badges */
+  --status-draft: #5d5877;
+  --status-review: #8a5a00;
+  --status-approved: #0b69a3;
+  --status-published: #1d7a45;
+
+  --success: #1d7a45;
+  --warning: #8a5a00;
+  --danger: #c0262d;
 }
 
 @theme inline {
@@ -29,11 +36,15 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-status-draft: var(--status-draft);
+  --color-status-review: var(--status-review);
+  --color-status-approved: var(--status-approved);
+  --color-status-published: var(--status-published);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
 body {

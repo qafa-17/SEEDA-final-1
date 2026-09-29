@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 // Fonts are self-hosted from npm: no request to Google at build or run time.
-import "@fontsource-variable/inter";
-import "@fontsource-variable/space-grotesk";
+import "@fontsource-variable/dm-sans";
+import "@fontsource-variable/sora";
 import { brand } from "@/config/brand";
 import "./globals.css";
 

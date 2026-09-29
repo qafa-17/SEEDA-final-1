@@ -1,7 +1,7 @@
-// Single place for product identity. Swap these when the Session 7 identity kit is final.
+// Single place for product identity.
 export const brand = {
-  name: "Knowledge Hub Publisher",
-  shortName: "KHP",
+  name: "Content Operations",
+  shortName: "S",
   tagline: "From a finished Google Doc to a live, findable Knowledge Hub page.",
   client: "EPCMst",
 } as const;

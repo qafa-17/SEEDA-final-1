@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { brand } from "@/config/brand";
 
+const stepColors = ["text-status-draft", "text-status-review", "text-status-approved", "text-status-published"];
+
 const steps = [
   { title: "Pick a Doc", body: "Choose a finished article from the shared Google Drive folder. Writing stays in Docs." },
   { title: "Fill the details", body: "Title, slug, meta description, type and keyword, checked as you type, in plain language." },
@@ -55,7 +57,7 @@ export default function Home() {
             <ol className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {steps.map((s, i) => (
                 <li key={s.title} className="rounded-lg border border-border p-5">
-                  <span className="font-display text-sm font-semibold text-accent">Step {i + 1}</span>
+                  <span className={`font-display text-sm font-semibold ${stepColors[i]}`}>Step {i + 1}</span>
                   <h3 className="mt-1 font-semibold">{s.title}</h3>
                   <p className="mt-2 text-sm text-muted">{s.body}</p>
                 </li>
