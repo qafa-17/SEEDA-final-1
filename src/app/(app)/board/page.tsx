@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { StageNotice } from "@/components/stage-notice";
+import { FormMessage } from "@/components/form-fields";
 
 export const metadata: Metadata = { title: "Board" };
 
@@ -12,9 +13,15 @@ const columns = [
   { key: "published", label: "Published", hint: "Live and verified", bar: "border-t-status-published", dot: "bg-status-published" },
 ];
 
-export default function BoardPage() {
+export default async function BoardPage({ searchParams }: PageProps<"/board">) {
+  const { passwordUpdated } = await searchParams;
   return (
     <>
+      {passwordUpdated ? (
+        <div className="mb-4">
+          <FormMessage tone="success" message="Your password has been updated." />
+        </div>
+      ) : null}
       <PageHeader
         title="Board"
         description="Every Knowledge Hub article and exactly where it stands."

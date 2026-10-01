@@ -16,7 +16,7 @@ Built for ENTR 3360 (Mount Royal University, Fall 2026).
 ## Build stages
 
 1. **App shell and navigation** ✅
-2. Sign up / sign in, roles
+2. **Sign up / sign in, roles** ✅
 3. Database schema + Row Level Security
 4. Synthetic data
 5. Board, article page, live validation, approval flow
@@ -24,6 +24,15 @@ Built for ENTR 3360 (Mount Royal University, Fall 2026).
 7. AI metadata suggestions
 8. Publish as a pull request + live verification
 9. Polish, states, Cloudflare domain
+
+## Database
+
+SQL migrations live in `supabase/migrations/` and are run in order in the Supabase SQL Editor.
+`supabase/tests/` holds checks that prove the Row Level Security rules hold (run against a local Postgres with `supabase_stub.sql` loaded first).
+
+## Environment variables
+
+Copy `.env.example` to `.env.local`. The same two values go in Vercel → Settings → Environment Variables.
 
 ## Run locally
 
