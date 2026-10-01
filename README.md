@@ -19,8 +19,8 @@ Built for ENTR 3360 (Mount Royal University, Fall 2026).
 2. **Sign up / sign in, roles** ✅
 3. **Database schema + Row Level Security** ✅
 4. **Synthetic data** ✅
-5. Board, article page, live validation, approval flow
-6. Google Drive import and conversion
+5. **Board, article page, live validation, approval flow** ✅
+6. **Google Drive import and conversion** ✅
 7. AI metadata suggestions
 8. Publish as a pull request + live verification
 9. Polish, states, Cloudflare domain
@@ -36,7 +36,18 @@ SQL migrations live in `supabase/migrations/` and are run in order in the Supaba
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local`. The same two values go in Vercel → Settings → Environment Variables.
+Copy `.env.example` to `.env.local`. In Vercel → Settings → Environment Variables:
+
+| Name | Secret? | What |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | no | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | no | Supabase publishable key (data is protected by Row Level Security) |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | **yes** | Full JSON key of the read-only Drive service account |
+| `DRIVE_FOLDER_ID` | no | The shared Knowledge Hub folder |
+
+## Tests
+
+`npm test` runs the Markdown converter tests and the Drive client tests (against a fake Google API, no network). SQL tests are in `supabase/tests/`.
 
 ## Run locally
 

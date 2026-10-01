@@ -4,7 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { FormMessage } from "@/components/form-fields";
 import { LIMITS, SLUG_PATTERN, blockingProblems, guidelineChecks, slugify, type ArticleFields } from "@/lib/content/rules";
-import { changeStatus, deleteDraft, saveArticle, type ActionState } from "./actions";
+import { changeStatus, deleteDraft, refreshFromDoc, saveArticle, type ActionState } from "./actions";
 
 type Option = { id: number; label: string };
 type Values = {
@@ -86,6 +86,7 @@ export function ArticleEditor({
   areas,
   ownerName,
   afterForm,
+  canRefresh,
   children,
 }: {
   article: ArticleFields & { id: string };
@@ -94,6 +95,7 @@ export function ArticleEditor({
   areas: Option[];
   ownerName: string;
   afterForm: React.ReactNode; // the article text, shown under the form
+  canRefresh: boolean; // has a real Google Doc behind it
   children: React.ReactNode; // server-rendered history etc., shown in the side column
 }) {
   const [saved, setSaved] = useState<Values>(() => toValues(article));
@@ -111,6 +113,12 @@ export function ArticleEditor({
     return result;
   }, {} as ActionState);
   const [submitState, submitAction] = useActionState(changeStatus, {} as ActionState);
+  // Refreshing the text changes the article's version, so keep ours in step.
+  const [refreshState, refreshAction] = useActionState(async (prev: ActionState, fd: FormData) => {
+    const result = await refreshFromDoc(prev, fd);
+    if (result.ok && result.savedAt) setVersion(result.savedAt);
+    return result;
+  }, {} as ActionState);
   const [deleteState, deleteAction] = useActionState(deleteDraft, {} as ActionState);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -221,6 +229,21 @@ export function ArticleEditor({
             <FormMessage message={saveState.message} />
           </div>
         </form>
+        {canRefresh ? (
+          <form action={refreshAction} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-4">
+            <input type="hidden" name="id" value={article.id} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">Edited the Google Doc since importing?</p>
+              <p className="text-xs text-muted">Bring in its latest text. Your details above are kept.</p>
+            </div>
+            <PendingButton label="Refresh from Doc" pendingLabel="Fetching…" />
+            {refreshState.message ? (
+              <p role={refreshState.ok ? "status" : "alert"} className={`w-full text-sm ${refreshState.ok ? "text-success" : "text-danger"}`}>
+                {refreshState.message}
+              </p>
+            ) : null}
+          </form>
+        ) : null}
         {afterForm}
       </div>
 

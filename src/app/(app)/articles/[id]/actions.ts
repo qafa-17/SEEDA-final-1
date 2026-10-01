@@ -7,6 +7,8 @@ import { requireActiveUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { changeStatusSchema, saveArticleSchema } from "@/lib/content/article-form";
 import { guidelineChecks, type ArticleFields } from "@/lib/content/rules";
+import { cleanDocMarkdown } from "@/lib/content/convert";
+import { DRIVE_ID, driveErrorMessage, exportDocMarkdown, getFolderDoc } from "@/lib/drive";
 
 export type ActionState = { ok?: boolean; message?: string; fieldErrors?: Record<string, string>; savedAt?: string };
 
@@ -127,4 +129,53 @@ export async function deleteDraft(_prev: ActionState, fd: FormData): Promise<Act
 
   revalidatePath("/board");
   redirect("/board?deleted=1");
+}
+
+/**
+ * Replace a draft's text with the latest version of its Google Doc.
+ * The details (title, slug, meta description...) are kept as they are.
+ */
+export async function refreshFromDoc(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  await requireActiveUser();
+  const id = z.uuid().safeParse(val(fd, "id"));
+  if (!id.success) return { message: "That request wasn't valid." };
+
+  const supabase = await createClient();
+  const { data: article } = await supabase.from("articles").select("drive_file_id, status, title").eq("id", id.data).maybeSingle();
+  if (!article) return { message: "This article no longer exists." };
+  if (article.status !== "draft") return { message: "Only drafts can be refreshed from their Doc." };
+
+  if (!DRIVE_ID.test(article.drive_file_id) || article.drive_file_id.startsWith("seed_")) {
+    return { message: "Sample articles have no Google Doc to refresh from." };
+  }
+
+  let doc, raw;
+  try {
+    doc = await getFolderDoc(article.drive_file_id);
+    raw = await exportDocMarkdown(article.drive_file_id);
+  } catch (e) {
+    return { message: driveErrorMessage(e) };
+  }
+  const converted = cleanDocMarkdown(raw, doc.name);
+
+  const { data, error } = await supabase
+    .from("articles")
+    .update({ body_markdown: converted.markdown, drive_modified_at: doc.modifiedTime })
+    .eq("id", id.data)
+    .eq("status", "draft")
+    .select(ARTICLE_FIELDS);
+  if (error) return { message: "Couldn't update the text. Please try again." };
+  if (!data || data.length === 0) return { message: "Only the owner or an approver can refresh this draft." };
+
+  const saved = data[0] as ArticleFields & { id: string; updated_at: string };
+  await refreshChecks(supabase, saved);
+  revalidatePath(`/articles/${id.data}`);
+  revalidatePath("/board");
+  return {
+    ok: true,
+    savedAt: saved.updated_at,
+    message: converted.imagesRemoved
+      ? `Text updated from the Doc. ${converted.imagesRemoved} image${converted.imagesRemoved === 1 ? " was" : "s were"} left out; images aren't supported yet.`
+      : "Text updated from the Doc.",
+  };
 }

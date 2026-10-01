@@ -55,9 +55,10 @@ function Field({ label, value, hint }: { label: string; value: React.ReactNode; 
   );
 }
 
-export default async function ArticlePage({ params }: PageProps<"/articles/[id]">) {
+export default async function ArticlePage({ params, searchParams }: PageProps<"/articles/[id]">) {
   const user = await requireActiveUser();
   const { id } = await params;
+  const notes = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
 
   const supabase = await createClient();
@@ -172,6 +173,15 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[id]"
         )}
       </header>
 
+      {notes.imported ? (
+        <div className="mt-4 space-y-2">
+          <FormMessage tone="success" message="Imported from Google Drive as a draft. Fill in the details below, then submit it for review." />
+          {notes.images ? (
+            <FormMessage message={`${Number(notes.images)} image${Number(notes.images) === 1 ? " was" : "s were"} left out of the text. Images aren't supported yet.`} />
+          ) : null}
+          {notes.truncated ? <FormMessage message="The Doc was very long, so only the first part was imported. Consider splitting it." /> : null}
+        </div>
+      ) : null}
       {a.status === "in_review" || a.status === "approved" ? (
         <section aria-labelledby="next-step" className="mt-4 rounded-lg border border-border bg-surface p-4">
           <h2 id="next-step" className="text-sm font-semibold">
@@ -201,6 +211,7 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[id]"
             areas={(areasRes.data ?? []) as { id: number; label: string }[]}
             ownerName={ownerName}
             afterForm={articleText}
+            canRefresh={!isSample}
           >
             {historyAndPublishing}
           </ArticleEditor>
