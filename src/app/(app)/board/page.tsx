@@ -43,6 +43,11 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
 
   return (
     <>
+      {sp.deleted ? (
+        <div className="mb-4">
+          <FormMessage tone="success" message="The draft was deleted." />
+        </div>
+      ) : null}
       {sp.passwordUpdated ? (
         <div className="mb-4">
           <FormMessage tone="success" message="Your password has been updated." />
