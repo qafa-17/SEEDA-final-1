@@ -1,5 +1,5 @@
 // Which pages need a signed-in user, and which are only for signed-out visitors.
-export const protectedPrefixes = ["/board", "/import", "/settings", "/reset-password"];
+export const protectedPrefixes = ["/board", "/import", "/settings", "/team", "/waiting", "/reset-password"];
 export const signedOutOnlyPrefixes = ["/login", "/signup", "/forgot-password"];
 
 export const HOME_AFTER_SIGN_IN = "/board";

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
 import { StageNotice } from "@/components/stage-notice";
+import { requireActiveUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Import from Drive" };
 
-export default function ImportPage() {
+export default async function ImportPage() {
+  await requireActiveUser();
   return (
     <>
       <PageHeader title="Import from Drive" description="Choose a finished Google Doc from the shared Knowledge Hub folder." />

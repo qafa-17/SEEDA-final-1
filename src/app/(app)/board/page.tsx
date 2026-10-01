@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { StageNotice } from "@/components/stage-notice";
 import { FormMessage } from "@/components/form-fields";
+import { requireActiveUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Board" };
 
@@ -14,6 +15,7 @@ const columns = [
 ];
 
 export default async function BoardPage({ searchParams }: PageProps<"/board">) {
+  await requireActiveUser();
   const { passwordUpdated } = await searchParams;
   return (
     <>

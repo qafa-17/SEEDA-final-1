@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export type AppRole = "publisher" | "approver";
+export type MemberAccess = "pending" | "active" | "disabled";
 
 export type CurrentUser = {
   id: string;
   email: string;
   fullName: string;
   role: AppRole;
+  access: MemberAccess;
 };
 
 /**
@@ -26,7 +28,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role")
+    .select("full_name, role, access")
     .eq("id", claims.sub)
     .single();
 
@@ -35,12 +37,28 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     email: typeof claims.email === "string" ? claims.email : "",
     fullName: profile?.full_name ?? "",
     role: (profile?.role as AppRole | undefined) ?? "publisher",
+    // If the profile can't be read, treat the account as not yet approved.
+    access: (profile?.access as MemberAccess | undefined) ?? "pending",
   };
 });
 
-/** Use at the top of any protected page or action. */
+/** Signed in (any access level). Use for pages like /waiting and /reset-password. */
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+/** Signed in AND let in by an approver. Use for every workspace page and action. */
+export async function requireActiveUser(): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (user.access !== "active") redirect("/waiting");
+  return user;
+}
+
+/** Active approver only. Others are sent to the board. */
+export async function requireApprover(): Promise<CurrentUser> {
+  const user = await requireActiveUser();
+  if (user.role !== "approver") redirect("/board");
   return user;
 }

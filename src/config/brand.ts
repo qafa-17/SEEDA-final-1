@@ -7,8 +7,11 @@ export const brand = {
 } as const;
 
 // Main navigation for signed-in pages. Every entry must point to a real page.
-export const appNav = [
-  { href: "/board", label: "Board", description: "Every article and where it stands" },
-  { href: "/import", label: "Import from Drive", description: "Bring in a finished Google Doc" },
-  { href: "/settings", label: "Settings", description: "Your account and workspace" },
-] as const;
+export type NavItem = { href: string; label: string; approverOnly?: boolean };
+
+export const appNav: NavItem[] = [
+  { href: "/board", label: "Board" },
+  { href: "/import", label: "Import from Drive" },
+  { href: "/team", label: "Team", approverOnly: true },
+  { href: "/settings", label: "Settings" },
+];

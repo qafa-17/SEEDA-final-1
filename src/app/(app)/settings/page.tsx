@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { RoleBadge } from "@/components/role-badge";
-import { requireUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { ProfileForm } from "./profile-form";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const user = await requireUser();
+  const user = await requireActiveUser();
   return (
     <>
       <PageHeader title="Settings" description="Your account and your role in the publishing workflow." />
@@ -35,7 +35,7 @@ export default async function SettingsPage() {
               <dd className="mt-1 text-xs text-muted">
                 {user.role === "approver"
                   ? "You can approve and publish articles."
-                  : "You can import articles and send them for review. An admin can make you an approver."}
+                  : "You can import articles and send them for review. An approver can give you approval rights."}
               </dd>
             </div>
             <div>
