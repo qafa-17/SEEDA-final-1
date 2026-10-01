@@ -17,8 +17,8 @@ Built for ENTR 3360 (Mount Royal University, Fall 2026).
 
 1. **App shell and navigation** ✅
 2. **Sign up / sign in, roles** ✅
-3. Database schema + Row Level Security
-4. Synthetic data
+3. **Database schema + Row Level Security** ✅
+4. **Synthetic data** ✅
 5. Board, article page, live validation, approval flow
 6. Google Drive import and conversion
 7. AI metadata suggestions
@@ -29,6 +29,10 @@ Built for ENTR 3360 (Mount Royal University, Fall 2026).
 
 SQL migrations live in `supabase/migrations/` and are run in order in the Supabase SQL Editor.
 `supabase/tests/` holds checks that prove the Row Level Security rules hold (run against a local Postgres with `supabase_stub.sql` loaded first).
+
+## Synthetic data
+
+`npm run seed:generate` (or `ARTICLES=300 npm run seed:generate`) writes `supabase/seed/seed_part*.sql`: fictional articles in every status, with history, guideline checks and publish attempts, plus a small fictional team (`@example.com`, cannot sign in). Run the parts in order in the Supabase SQL Editor. `supabase/seed/remove_seed.sql` removes only the synthetic rows. The output is the same every run (fixed random seed).
 
 ## Environment variables
 
