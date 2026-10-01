@@ -1,100 +1,148 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { z } from "zod";
 import { PageHeader } from "@/components/page-header";
-import { RoleBadge } from "@/components/role-badge";
 import { FormMessage } from "@/components/form-fields";
-import { requireApprover, type AppRole, type MemberAccess } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { MemberActions } from "./member-actions";
+import { cleanSearch } from "@/lib/content/board-query";
+import { PeopleView } from "./people-view";
+import { CoworkerList, TeamCards, coworkers, groupTeams, type TeamRow } from "./teams-view";
 
 export const metadata: Metadata = { title: "Team" };
 
-type Member = {
-  id: string;
-  full_name: string;
-  email: string;
-  role: AppRole;
-  access: MemberAccess;
-  created_at: string;
-};
+const PER_PAGE = 20;
+const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
-const dateFormat = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Edmonton" });
+export default async function TeamPage({ searchParams }: PageProps<"/team">) {
+  const me = await requireActiveUser();
+  const isApprover = me.role === "approver";
+  const sp = await searchParams;
 
-export default async function TeamPage() {
-  const me = await requireApprover();
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("list_team");
-  const members = (data ?? []) as Member[];
+  // Publishers only ever get "mine"; the database applies the same rule.
+  const requested = z.enum(["mine", "all", "people"]).catch("mine").parse(first(sp.view) ?? "mine");
+  const view = isApprover ? requested : "mine";
+  const person = z.uuid().optional().catch(undefined).parse(first(sp.person) || undefined);
+  const q = cleanSearch(first(sp.q) ?? "");
+  const page = z.coerce.number().int().min(1).max(1000).catch(1).parse(first(sp.page) ?? 1);
 
-  const groups: { key: MemberAccess; title: string; empty: string }[] = [
-    { key: "pending", title: "Waiting to join", empty: "Nobody is waiting." },
-    { key: "active", title: "Team", empty: "No active members." },
-    { key: "disabled", title: "Access removed", empty: "" },
-  ];
+  const href = (change: Record<string, string | number | undefined>) => {
+    const merged: Record<string, string | number | undefined> = { view, person, q, page: undefined, ...change };
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(merged)) if (v !== undefined && v !== "" && !(k === "view" && v === "mine")) p.set(k, String(v));
+    const s = p.toString();
+    return s ? `/team?${s}` : "/team";
+  };
+
+  const tabs = [
+    { key: "mine", label: "My teams", show: true },
+    { key: "all", label: "All teams", show: isApprover },
+    { key: "people", label: "Everyone who joined", show: isApprover },
+  ].filter((t) => t.show);
+
+  let body: React.ReactNode;
+
+  if (view === "people") {
+    body = <PeopleView meId={me.id} />;
+  } else {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("article_teams");
+    const allTeams = groupTeams((data ?? []) as TeamRow[]);
+    const myTeams = allTeams.filter((t) => t.members.some((m) => m.member_id === me.id));
+    const people = coworkers(allTeams, me.id);
+
+    let teams = view === "mine" ? myTeams : allTeams;
+    if (person) teams = teams.filter((t) => t.members.some((m) => m.member_id === person));
+    if (q) teams = teams.filter((t) => (t.title ?? "").toLowerCase().includes(q.toLowerCase()));
+    const pages = Math.max(1, Math.ceil(teams.length / PER_PAGE));
+    const shown = teams.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+    // Everyone who appears on any visible team, for the approver's person filter.
+    const everyone = [...new Map(allTeams.flatMap((t) => t.members).map((m) => [m.member_id, m.full_name || "Unnamed member"])).entries()]
+      .sort((a, b) => a[1].localeCompare(b[1]));
+
+    body = (
+      <>
+        {error ? <FormMessage message="Couldn't load teams. Refresh to try again." /> : null}
+
+        {view === "mine" ? (
+          <section aria-labelledby="coworkers" className="rounded-lg border border-border bg-surface p-5">
+            <h2 id="coworkers" className="font-semibold">People you work with</h2>
+            <p className="mt-1 text-sm text-muted">Everyone who has worked on an article with you. Pick someone to see only the articles you share.</p>
+            <div className="mt-3">
+              <CoworkerList people={people} activeId={person} hrefFor={(id) => href({ person: id })} />
+            </div>
+          </section>
+        ) : (
+          <form method="get" action="/team" className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
+            <input type="hidden" name="view" value="all" />
+            <div className="min-w-48 flex-1">
+              <label htmlFor="q" className="block text-xs font-medium text-muted">Article title</label>
+              <input id="q" name="q" type="search" defaultValue={q} maxLength={100} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label htmlFor="person" className="block text-xs font-medium text-muted">Person</label>
+              <select id="person" name="person" defaultValue={person ?? ""} className="mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm">
+                <option value="">Anyone</option>
+                {everyone.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              </select>
+            </div>
+            <button type="submit" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Filter</button>
+            {q || person ? <Link href="/team?view=all" className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-border/40">Clear</Link> : null}
+          </form>
+        )}
+
+        <h2 className="mt-8 font-semibold">
+          {view === "mine" ? "Your article teams" : "Every article team"}{" "}
+          <span className="rounded-full bg-border px-2 py-0.5 text-xs font-semibold text-muted">{teams.length}</span>
+        </h2>
+
+        <div className="mt-3">
+          {shown.length === 0 ? (
+            <p className="rounded-md border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
+              {view === "mine" && myTeams.length === 0
+                ? "You're not on any article teams yet. Import an article, or review one, and its team appears here."
+                : "No teams match."}
+            </p>
+          ) : (
+            <TeamCards teams={shown} meId={me.id} />
+          )}
+        </div>
+
+        {pages > 1 ? (
+          <nav aria-label="Pages" className="mt-4 flex items-center justify-between text-sm">
+            {page > 1 ? <Link href={href({ page: page - 1 })} className="rounded-md border border-border bg-surface px-3 py-1.5 font-medium hover:bg-border/40">Previous</Link> : <span className="rounded-md border border-border px-3 py-1.5 text-muted opacity-50">Previous</span>}
+            <span className="text-muted">Page {page} of {pages}</span>
+            {page < pages ? <Link href={href({ page: page + 1 })} className="rounded-md border border-border bg-surface px-3 py-1.5 font-medium hover:bg-border/40">Next</Link> : <span className="rounded-md border border-border px-3 py-1.5 text-muted opacity-50">Next</span>}
+          </nav>
+        ) : null}
+      </>
+    );
+  }
 
   return (
     <>
-      <PageHeader title="Team" description="Let new people in, choose who can approve, and remove access." />
-      {error ? <FormMessage message="Couldn't load the team list. Refresh to try again." /> : null}
-
-      <div className="space-y-8">
-        {groups.map((g) => {
-          const rows = members.filter((m) => m.access === g.key);
-          if (g.key === "disabled" && rows.length === 0) return null;
-          return (
-            <section key={g.key} aria-labelledby={`team-${g.key}`}>
-              <h2 id={`team-${g.key}`} className="flex items-center gap-2 font-semibold">
-                {g.title}
-                <span className="rounded-full bg-border px-2 py-0.5 text-xs font-semibold text-muted">{rows.length}</span>
-              </h2>
-              {rows.length === 0 ? (
-                <p className="mt-3 rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-muted">{g.empty}</p>
-              ) : (
-                <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
-                  {rows.map((m) => {
-                    const isMe = m.id === me.id;
-                    const name = m.full_name || m.email;
-                    return (
-                      <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">
-                            {name} {isMe ? <span className="text-sm font-normal text-muted">(you)</span> : null}
-                          </p>
-                          <p className="truncate text-sm text-muted">{m.email}</p>
-                          <div className="mt-1 flex items-center gap-2">
-                            <RoleBadge role={m.role} />
-                            <span className="text-xs text-muted">Joined {dateFormat.format(new Date(m.created_at))}</span>
-                          </div>
-                        </div>
-                        {isMe ? null : (
-                          <MemberActions
-                            userId={m.id}
-                            name={name}
-                            changes={
-                              m.access === "pending"
-                                ? [
-                                    { kind: "access", value: "active", label: "Let in", tone: "primary" },
-                                    { kind: "access", value: "disabled", label: "Decline", tone: "danger" },
-                                  ]
-                                : m.access === "active"
-                                  ? [
-                                      m.role === "publisher"
-                                        ? { kind: "role", value: "approver", label: "Make approver", tone: "neutral" }
-                                        : { kind: "role", value: "publisher", label: "Make publisher", tone: "neutral" },
-                                      { kind: "access", value: "disabled", label: "Remove access", tone: "danger" },
-                                    ]
-                                  : [{ kind: "access", value: "active", label: "Restore access", tone: "neutral" }]
-                            }
-                          />
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
-          );
-        })}
-      </div>
+      <PageHeader
+        title="Team"
+        description={isApprover ? "Who works on what, and who has access." : "The people you work with, article by article."}
+      />
+      {tabs.length > 1 ? (
+        <nav aria-label="Team views" className="mb-6 flex gap-1 border-b border-border">
+          {tabs.map((t) => (
+            <Link
+              key={t.key}
+              href={t.key === "mine" ? "/team" : `/team?view=${t.key}`}
+              aria-current={view === t.key ? "page" : undefined}
+              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
+                view === t.key ? "border-primary text-foreground" : "border-transparent text-muted hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+      {body}
     </>
   );
 }

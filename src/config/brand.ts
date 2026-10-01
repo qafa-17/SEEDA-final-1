@@ -12,6 +12,6 @@ export type NavItem = { href: string; label: string; approverOnly?: boolean };
 export const appNav: NavItem[] = [
   { href: "/board", label: "Board" },
   { href: "/import", label: "Import from Drive" },
-  { href: "/team", label: "Team", approverOnly: true },
+  { href: "/team", label: "Team" },
   { href: "/settings", label: "Settings" },
 ];
