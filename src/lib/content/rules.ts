@@ -37,8 +37,15 @@ export function wordCount(body: string): number {
   return trimmed === "" ? 0 : trimmed.split(/\s+/).length;
 }
 
+/** Same as ArticleFields, but with the database's word count instead of the full body (for lists). */
+export type ArticleSummary = Omit<ArticleFields, "body_markdown"> & { word_count: number };
+
 /** Plain-language problems that stop submission. Empty array = ready. */
 export function blockingProblems(a: ArticleFields): string[] {
+  return blockingProblemsFor({ ...a, word_count: wordCount(a.body_markdown) });
+}
+
+export function blockingProblemsFor(a: ArticleSummary): string[] {
   const p: string[] = [];
   if (a.title === null || a.title.trim().length < LIMITS.titleMin) p.push(`Title must be at least ${LIMITS.titleMin} characters.`);
   if (a.title !== null && a.title.length > LIMITS.titleMax) p.push(`Title must be ${LIMITS.titleMax} characters or fewer.`);
@@ -52,7 +59,7 @@ export function blockingProblems(a: ArticleFields): string[] {
   if (a.target_keyword === null || a.target_keyword.trim().length < LIMITS.keywordMin) p.push("Add a target keyword.");
   if (a.author_name === null || a.author_name.trim() === "") p.push("Add an author.");
   if (a.publish_date === null) p.push("Add a publish date.");
-  if (wordCount(a.body_markdown) < 1) p.push("The article body is empty.");
+  if (a.word_count < 1) p.push("The article body is empty.");
   return p;
 }
 
