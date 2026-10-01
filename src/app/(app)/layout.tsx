@@ -28,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
-      <aside className="flex flex-col border-b border-border bg-surface p-4 md:w-60 md:shrink-0 md:border-b-0 md:border-r">
+      <aside className="flex flex-col border-b border-border bg-surface p-4 md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:overflow-y-auto md:border-b-0 md:border-r">
         <div className="mb-4">
           <Logo href="/board" />
         </div>
