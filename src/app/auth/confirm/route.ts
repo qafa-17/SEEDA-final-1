@@ -6,7 +6,8 @@ import { safeNextPath } from "@/lib/routes";
 const allowedTypes: EmailOtpType[] = ["signup", "email", "recovery", "invite", "email_change", "magiclink"];
 
 /**
- * Where links in Supabase emails land (confirm account, reset password).
+ * Where links in Supabase emails land (confirm account, reset password),
+ * and where Google sends people back after "Continue with Google".
  * Supports both link styles:
  *  - ?token_hash=...&type=...  (works even if opened on a different device)
  *  - ?code=...                 (Supabase default; same browser only)
@@ -17,6 +18,12 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const code = searchParams.get("code");
+
+  // Google (or another provider) sent the person back with an error, e.g.
+  // they pressed Cancel on Google's screen. Back to sign in with a message.
+  if (searchParams.get("error")) {
+    return NextResponse.redirect(new URL("/login?oauth=cancelled", request.url));
+  }
 
   const supabase = await createClient();
   let ok = false;

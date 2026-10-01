@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SignUpForm } from "../forms";
+import { GoogleButton, OrDivider } from "../google-button";
 
 export const metadata: Metadata = { title: "Create account" };
 
@@ -9,6 +10,8 @@ export default function SignupPage() {
     <>
       <h1 className="font-display text-xl font-bold">Create your account</h1>
       <p className="mt-1 text-sm text-muted">After you confirm your email, an approver lets you in to the workspace.</p>
+      <GoogleButton label="Sign up with Google" />
+      <OrDivider />
       <SignUpForm />
       <p className="mt-5 text-center text-sm text-muted">
         Already have an account?{" "}

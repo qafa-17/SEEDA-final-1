@@ -87,6 +87,23 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
   redirect(safeNextPath(str(formData, "next")));
 }
 
+// "Continue with Google". Login only asks Google for name and email (the
+// default scopes); it does NOT grant access to anyone's Drive.
+export async function signInWithGoogle(formData: FormData) {
+  const next = safeNextPath(str(formData, "next"));
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      // Google sends people back here; /auth/confirm swaps the code for a session.
+      redirectTo: `${await siteOrigin()}/auth/confirm?next=${encodeURIComponent(next)}`,
+      queryParams: { prompt: "select_account" },
+    },
+  });
+  if (error || !data.url) redirect("/login?oauth=failed");
+  redirect(data.url);
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
