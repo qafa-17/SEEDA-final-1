@@ -1,5 +1,6 @@
 // Run: NODE_OPTIONS=--conditions=react-server npx tsx tests/drive.test.mts
 // Tests the Drive client against a fake Google API (no network, throwaway key).
+/* eslint-disable @typescript-eslint/no-explicit-any -- test doubles for fetch and dynamic imports */
 import { generateKeyPairSync, createVerify } from "node:crypto";
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs8", format: "pem" }, publicKeyEncoding: { type: "spki", format: "pem" } });
 const FOLDER = "folderAbc123456789";
