@@ -12,6 +12,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <>
       <h1 className="font-display text-xl font-bold">Sign in</h1>
+      {params.accountDeleted ? (
+        <div className="mt-4">
+          <FormMessage tone="success" message="Your account has been deleted." />
+        </div>
+      ) : null}
       {params.signedOut ? (
         <div className="mt-4">
           <FormMessage tone="success" message="You're signed out." />

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { RoleBadge } from "@/components/role-badge";
 import { requireActiveUser } from "@/lib/auth";
 import { ProfileForm } from "./profile-form";
+import { DeleteAccountForm } from "../../(auth)/delete-account";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -49,6 +50,12 @@ export default async function SettingsPage() {
           </dl>
         </section>
       </div>
+      <section aria-labelledby="danger-zone" className="mt-6 rounded-lg border border-danger/30 bg-surface p-5">
+        <h2 id="danger-zone" className="font-semibold text-danger">Delete account</h2>
+        <div className="mt-3">
+          <DeleteAccountForm />
+        </div>
+      </section>
     </>
   );
 }

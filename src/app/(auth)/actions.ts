@@ -156,3 +156,32 @@ export async function updateProfile(_prev: FormState, formData: FormData): Promi
   revalidatePath("/", "layout");
   return { success: "Saved.", values: { fullName: parsed.data.fullName } };
 }
+
+export type DeleteAccountState = { message?: string };
+
+// Permanently deletes the signed-in person's account. Works for pending
+// accounts too. The database function removes only the CALLER's own
+// account (it uses their session, never an id from the form) and refuses
+// to remove the last active approver.
+export async function deleteAccount(_prev: DeleteAccountState, formData: FormData): Promise<DeleteAccountState> {
+  await requireUser();
+  if (str(formData, "confirm").trim() !== "DELETE") {
+    return { message: "Type DELETE in capitals to confirm." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_own_account");
+  if (error) {
+    return {
+      message:
+        error.hint === "last_approver"
+          ? "You're the only approver. Make someone else an approver on the Team page first, so someone can still let people in."
+          : "Couldn't delete your account. Please try again.",
+    };
+  }
+
+  // The account is gone; clear this browser's session cookies too.
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/login?accountDeleted=1");
+}

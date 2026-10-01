@@ -178,7 +178,6 @@ set role authenticated;
 do $$ begin assert (select count(*) from public.articles) = 0, 'disabled sees nothing'; end $$;
 reset role;
 
--- 9. Owners with articles can't be deleted by accident -------------------
-select t_expect_error($q$delete from auth.users where id='aaaaaaaa-0000-0000-0000-000000000002'$q$, array['23503'], 'delete owner with articles');
+-- (What happens to articles when their owner is deleted is tested in 0003.)
 
 select 'ALL WORKFLOW TESTS PASSED' as result;

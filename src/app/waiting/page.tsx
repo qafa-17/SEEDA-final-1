@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { requireUser } from "@/lib/auth";
 import { signOut } from "../(auth)/actions";
+import { DeleteAccountForm } from "../(auth)/delete-account";
 
 export const metadata: Metadata = { title: "Waiting for approval" };
 
@@ -50,6 +51,12 @@ export default async function WaitingPage() {
             </button>
           </form>
         </div>
+        <details className="mt-6 border-t border-border pt-4 text-left">
+          <summary className="cursor-pointer text-sm font-medium text-muted">Changed your mind? Delete this account</summary>
+          <div className="mt-3">
+            <DeleteAccountForm />
+          </div>
+        </details>
       </div>
     </main>
   );
