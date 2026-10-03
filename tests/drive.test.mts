@@ -20,6 +20,8 @@ globalThis.fetch = (async (input: any, init?: any) => {
   if (url.includes("/files?")) {
     const q = new URL(url).searchParams.get("q")!;
     if (!q.includes(`'${FOLDER}' in parents`) || !q.includes("trashed = false")) return json({}, 400);
+    const sp = new URL(url).searchParams;
+    if (sp.get("corpora") !== "allDrives" || sp.get("supportsAllDrives") !== "true" || sp.get("includeItemsFromAllDrives") !== "true") return json({}, 400); // shared drives
     return json({ files: [{ id: "docAAAAAAAAAAAA1", name: "Winter Logistics", modifiedTime: "2026-10-01T10:00:00Z", lastModifyingUser: { displayName: "Qafa" } }] });
   }
   if (url.includes("/export")) return new Response("# Winter Logistics\n\nBody ![][image1]\n\n[image1]: <data:image/png;base64,AAAA>", { status: 200 });

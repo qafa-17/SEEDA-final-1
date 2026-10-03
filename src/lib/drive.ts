@@ -159,6 +159,8 @@ export async function listFolderDocs(): Promise<DriveDoc[]> {
     fields: "files(id,name,modifiedTime,lastModifyingUser(displayName))",
     orderBy: "modifiedTime desc",
     pageSize: "200",
+    // The folder may live in a shared drive (recommended) or a personal Drive.
+    corpora: "allDrives",
     supportsAllDrives: "true",
     includeItemsFromAllDrives: "true",
   });
