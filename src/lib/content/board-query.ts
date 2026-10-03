@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { STATUSES, type ArticleStatus } from "./status";
+import { loadSitePages } from "./site-context";
 
 export const PAGE_SIZE = 25;
 
@@ -49,6 +50,8 @@ export type BoardRow = {
   content_type_id: number | null;
   service_area_id: number | null;
   target_keyword: string | null;
+  tags: string[];
+  source: "google_doc" | "ai_draft";
   author_name: string | null;
   publish_date: string | null;
   word_count: number;
@@ -66,10 +69,11 @@ export type Option = { value: string; label: string };
 export async function loadBoard(params: BoardParams, currentUserId: string) {
   const supabase = await createClient();
 
-  const [typesRes, areasRes, peopleRes] = await Promise.all([
+  const [typesRes, areasRes, peopleRes, sitePages] = await Promise.all([
     supabase.from("content_types").select("id, slug, label").order("sort_order"),
     supabase.from("service_areas").select("id, slug, label").order("sort_order"),
     supabase.from("profiles").select("id, full_name").eq("access", "active").order("full_name"),
+    loadSitePages(supabase),
   ]);
   const types = typesRes.data ?? [];
   const areas = areasRes.data ?? [];
@@ -102,7 +106,7 @@ export async function loadBoard(params: BoardParams, currentUserId: string) {
     supabase
       .from("articles")
       .select(
-        "id, title, slug, meta_description, content_type_id, service_area_id, target_keyword, author_name, publish_date, word_count, status, updated_at, owner_id, content_types(label), service_areas(label), owner:profiles!articles_owner_id_fkey(full_name), article_checks(result)",
+        "id, title, slug, meta_description, content_type_id, service_area_id, target_keyword, tags, source, author_name, publish_date, word_count, status, updated_at, owner_id, content_types(label), service_areas(label), owner:profiles!articles_owner_id_fkey(full_name), article_checks(result)",
         { count: "exact" },
       ),
   );
@@ -120,6 +124,7 @@ export async function loadBoard(params: BoardParams, currentUserId: string) {
 
   return {
     rows: (listRes.data ?? []) as unknown as BoardRow[],
+    sitePages,
     total: listRes.count ?? 0,
     error: Boolean(listRes.error || allRes.error),
     counts: { all: allRes.count ?? 0, ...counts },

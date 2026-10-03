@@ -9,7 +9,7 @@
     "lint": "eslint",
     "seed:generate": "tsx scripts/seed/generate.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/convert.test.ts && NODE_OPTIONS=--conditions=react-server tsx tests/drive.test.mts"
+    "test": "tsx tests/convert.test.ts && tsx tests/schema.test.ts && NODE_OPTIONS=--conditions=react-server tsx tests/drive.test.mts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",

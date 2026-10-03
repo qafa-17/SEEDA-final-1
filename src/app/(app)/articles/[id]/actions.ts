@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { changeStatusSchema, saveArticleSchema } from "@/lib/content/article-form";
 import { guidelineChecks, type ArticleFields } from "@/lib/content/rules";
 import { cleanDocMarkdown } from "@/lib/content/convert";
+import { loadSiteContext } from "@/lib/content/site-context";
 import { DRIVE_ID, driveErrorMessage, exportDocMarkdown, getFolderDoc } from "@/lib/drive";
 
 export type ActionState = { ok?: boolean; message?: string; fieldErrors?: Record<string, string>; savedAt?: string };
@@ -18,12 +19,13 @@ const val = (fd: FormData, k: string) => {
 };
 
 const ARTICLE_FIELDS =
-  "id, title, slug, meta_description, content_type_id, service_area_id, target_keyword, author_name, publish_date, body_markdown, status, updated_at";
+  "id, title, slug, meta_description, content_type_id, service_area_id, target_keyword, secondary_keywords, tags, author_name, publish_date, body_markdown, status, updated_at";
 
 /** Re-run the guideline checks for an article and store the results. */
 async function refreshChecks(supabase: Awaited<ReturnType<typeof createClient>>, article: ArticleFields & { id: string }) {
   const now = new Date().toISOString();
-  const rows = guidelineChecks(article).map((c) => ({
+  const site = await loadSiteContext(supabase, article.id);
+  const rows = guidelineChecks(article, site).map((c) => ({
     article_id: article.id,
     rule_key: c.rule_key,
     result: c.result,
@@ -49,6 +51,8 @@ export async function saveArticle(_prev: ActionState, fd: FormData): Promise<Act
     content_type_id: val(fd, "content_type_id"),
     service_area_id: val(fd, "service_area_id"),
     target_keyword: val(fd, "target_keyword"),
+    secondary_keywords: [val(fd, "secondary_keyword_1"), val(fd, "secondary_keyword_2")],
+    tags: val(fd, "tags"),
     author_name: val(fd, "author_name"),
     publish_date: val(fd, "publish_date"),
   });
@@ -58,6 +62,9 @@ export async function saveArticle(_prev: ActionState, fd: FormData): Promise<Act
     return { message: "Some details need fixing before they can be saved.", fieldErrors };
   }
   const { id, updatedAt, ...fields } = parsed.data;
+  // An extra keyword that repeats the main one adds nothing.
+  const primary = fields.target_keyword?.toLowerCase();
+  fields.secondary_keywords = fields.secondary_keywords.filter((k) => k.toLowerCase() !== primary);
 
   const supabase = await createClient();
   const { data, error } = await supabase

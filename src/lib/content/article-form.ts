@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SLUG_PATTERN } from "./rules";
+import { LIMITS, SLUG_PATTERN, TAG_PATTERN, parseTags } from "./rules";
 
 // Format rules for SAVING a draft. They match the database's column checks,
 // so a save never fails on a format the form could have caught. Missing
@@ -35,6 +35,22 @@ export const saveArticleSchema = z.object({
   content_type_id: optionalId,
   service_area_id: optionalId,
   target_keyword: optionalText(80, "Keep the keyword under 80 characters."),
+  // Up to two more keywords, each in its own box. Blank boxes are dropped.
+  secondary_keywords: z
+    .array(z.string().transform((s) => s.trim()))
+    .max(LIMITS.maxSecondaryKeywords)
+    .transform((ks) => [...new Map(ks.filter(Boolean).map((k) => [k.toLowerCase(), k])).values()])
+    .pipe(z.array(z.string().min(LIMITS.keywordMin, "Keywords need at least 2 characters.").max(LIMITS.keywordMax, "Keep each keyword under 80 characters."))),
+  // Typed as one comma-separated line; tidied to lowercase and de-duplicated.
+  tags: z
+    .string()
+    .max(400, "That's too many tags.")
+    .transform(parseTags)
+    .pipe(
+      z
+        .array(z.string().regex(TAG_PATTERN, "Tags are 2 to 30 characters: letters, numbers, spaces, & and hyphens."))
+        .max(LIMITS.maxTags, `Use ${LIMITS.maxTags} tags or fewer.`),
+    ),
   author_name: optionalText(100, "Keep the author name under 100 characters."),
   publish_date: z
     .string()

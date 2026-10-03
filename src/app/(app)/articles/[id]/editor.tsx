@@ -3,7 +3,10 @@
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { FormMessage } from "@/components/form-fields";
-import { LIMITS, SLUG_PATTERN, blockingProblems, guidelineChecks, slugify, type ArticleFields } from "@/lib/content/rules";
+import {
+  LIMITS, SITE_PREFIX, SLUG_PATTERN, TAG_PATTERN, blockingIssues, guidelineChecks, parseTags, slugify, wordCount,
+  type ArticleFields, type FieldName, type SiteContext,
+} from "@/lib/content/rules";
 import { changeStatus, deleteDraft, refreshFromDoc, saveArticle, type ActionState } from "./actions";
 
 type Option = { id: number; label: string };
@@ -14,6 +17,9 @@ type Values = {
   content_type_id: string;
   service_area_id: string;
   target_keyword: string;
+  secondary_keyword_1: string;
+  secondary_keyword_2: string;
+  tags: string;
   author_name: string;
   publish_date: string;
 };
@@ -25,6 +31,9 @@ const toValues = (a: ArticleFields): Values => ({
   content_type_id: a.content_type_id ? String(a.content_type_id) : "",
   service_area_id: a.service_area_id ? String(a.service_area_id) : "",
   target_keyword: a.target_keyword ?? "",
+  secondary_keyword_1: a.secondary_keywords[0] ?? "",
+  secondary_keyword_2: a.secondary_keywords[1] ?? "",
+  tags: a.tags.join(", "),
   author_name: a.author_name ?? "",
   publish_date: a.publish_date ?? "",
 });
@@ -39,6 +48,8 @@ const toFields = (v: Values, body: string): ArticleFields => ({
   author_name: v.author_name.trim() === "" ? null : v.author_name.trim(),
   publish_date: v.publish_date === "" ? null : v.publish_date,
   body_markdown: body,
+  tags: parseTags(v.tags),
+  secondary_keywords: [v.secondary_keyword_1, v.secondary_keyword_2].map((k) => k.trim()).filter(Boolean),
 });
 
 const inputClass = "mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm";
@@ -87,6 +98,8 @@ export function ArticleEditor({
   ownerName,
   afterForm,
   canRefresh,
+  site,
+  keywords,
   children,
 }: {
   article: ArticleFields & { id: string };
@@ -96,6 +109,8 @@ export function ArticleEditor({
   ownerName: string;
   afterForm: React.ReactNode; // the article text, shown under the form
   canRefresh: boolean; // has a real Google Doc behind it
+  site: SiteContext; // the live site's pages, for URL and link checks
+  keywords: string[]; // the keyword library, offered as suggestions
   children: React.ReactNode; // server-rendered history etc., shown in the side column
 }) {
   const [saved, setSaved] = useState<Values>(() => toValues(article));
@@ -124,14 +139,24 @@ export function ArticleEditor({
 
   const dirty = JSON.stringify(values) !== JSON.stringify(saved);
   const fields = useMemo(() => toFields(values, article.body_markdown), [values, article.body_markdown]);
-  const problems = useMemo(() => blockingProblems(fields), [fields]);
-  const tips = useMemo(() => guidelineChecks(fields), [fields]);
+  const issues = useMemo(() => blockingIssues({ ...fields, word_count: wordCount(fields.body_markdown) }, site), [fields, site]);
+  const problems = issues.map((i) => i.message);
+  const tips = useMemo(() => guidelineChecks(fields, site), [fields, site]);
+  const tagList = fields.tags;
+  const badTags = tagList.filter((t) => !TAG_PATTERN.test(t));
   const set = (k: keyof Values) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setValues((v) => ({ ...v, [k]: e.target.value }));
 
   const slugInvalid = values.slug.trim() !== "" && !SLUG_PATTERN.test(values.slug.trim());
+  // What to show under a field: the server's complaint about the last save
+  // first, otherwise the rule the field currently breaks.
   const err = (k: string) => saveState.fieldErrors?.[k];
+  const issue = (k: FieldName) => issues.find((i) => i.field === k)?.message;
   const border = (bad: boolean) => (bad ? "border-danger" : "border-border");
+  const note = (k: FieldName, extra?: string) => {
+    const message = err(k) ?? extra ?? issue(k);
+    return message ? <p id={`${k}-error`} className="mt-1 text-xs text-danger">{message}</p> : null;
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
@@ -152,8 +177,8 @@ export function ArticleEditor({
                 <label htmlFor="title" className="text-sm font-medium">Title</label>
                 <Counter length={values.title.trim().length} min={LIMITS.titleMin} max={LIMITS.titleMax} />
               </div>
-              <input id="title" name="title" value={values.title} onChange={set("title")} maxLength={200} className={`${inputClass} ${border(Boolean(err("title")) || values.title.length > LIMITS.titleMax)}`} />
-              {err("title") ? <p className="mt-1 text-sm text-danger">{err("title")}</p> : null}
+              <input id="title" name="title" value={values.title} onChange={set("title")} maxLength={200} aria-describedby="title-error" className={`${inputClass} ${border(Boolean(err("title") ?? issue("title")))}`} />
+              {note("title")}
             </div>
 
             <div>
@@ -168,12 +193,12 @@ export function ArticleEditor({
                   Make from title
                 </button>
               </div>
-              <div className="mt-1 flex items-center rounded-md border border-border bg-background text-sm">
-                <span className="shrink-0 whitespace-nowrap pl-3 text-muted">/knowledge-hub/</span>
+              <div className={`mt-1 flex items-center rounded-md border bg-background text-sm ${border(slugInvalid || Boolean(err("slug") ?? issue("slug")))}`}>
+                <span className="shrink-0 whitespace-nowrap pl-3 text-muted">{SITE_PREFIX}</span>
                 <input id="slug" name="slug" value={values.slug} onChange={(e) => setValues((v) => ({ ...v, slug: e.target.value.toLowerCase() }))} maxLength={80} aria-describedby="slug-help" className={`min-w-0 flex-1 rounded-r-md bg-transparent px-1 py-2 outline-none ${slugInvalid ? "text-danger" : ""}`} />
               </div>
-              <p id="slug-help" className={`mt-1 text-xs ${slugInvalid || err("slug") ? "text-danger" : "text-muted"}`}>
-                {err("slug") ?? (slugInvalid ? "Use lowercase letters, numbers and single hyphens only." : "Lowercase words joined by hyphens.")}
+              <p id="slug-help" className={`mt-1 text-xs ${slugInvalid || err("slug") || issue("slug") ? "text-danger" : "text-muted"}`}>
+                {err("slug") ?? (slugInvalid ? "Use lowercase letters, numbers and single hyphens only." : issue("slug") ?? "Lowercase words joined by hyphens. This becomes the page's address.")}
               </p>
             </div>
 
@@ -182,37 +207,80 @@ export function ArticleEditor({
                 <label htmlFor="meta_description" className="text-sm font-medium">Meta description</label>
                 <Counter length={values.meta_description.trim().length} min={LIMITS.metaMin} max={LIMITS.metaMax} />
               </div>
-              <textarea id="meta_description" name="meta_description" value={values.meta_description} onChange={set("meta_description")} maxLength={300} rows={3} className={`${inputClass} ${border(Boolean(err("meta_description")))}`} />
-              <p className="mt-1 text-xs text-muted">The short summary search engines show under the title.</p>
+              <textarea id="meta_description" name="meta_description" value={values.meta_description} onChange={set("meta_description")} maxLength={300} rows={3} aria-describedby="meta_description-error" className={`${inputClass} ${border(Boolean(err("meta_description") ?? issue("meta_description")))}`} />
+              {note("meta_description") ?? <p className="mt-1 text-xs text-muted">The short summary search engines show under the title.</p>}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="content_type_id" className="text-sm font-medium">Type</label>
-                <select id="content_type_id" name="content_type_id" value={values.content_type_id} onChange={set("content_type_id")} className={`${inputClass} border-border`}>
+                <select id="content_type_id" name="content_type_id" value={values.content_type_id} onChange={set("content_type_id")} className={`${inputClass} ${border(Boolean(issue("content_type_id")))}`}>
                   <option value="">Choose a type</option>
                   {types.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
+                {note("content_type_id")}
               </div>
               <div>
                 <label htmlFor="service_area_id" className="text-sm font-medium">Service area</label>
-                <select id="service_area_id" name="service_area_id" value={values.service_area_id} onChange={set("service_area_id")} className={`${inputClass} border-border`}>
+                <select id="service_area_id" name="service_area_id" value={values.service_area_id} onChange={set("service_area_id")} className={`${inputClass} ${border(Boolean(issue("service_area_id")))}`}>
                   <option value="">Choose a service area</option>
                   {areas.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
                 </select>
+                {note("service_area_id")}
               </div>
-              <div>
-                <label htmlFor="target_keyword" className="text-sm font-medium">Target keyword</label>
-                <input id="target_keyword" name="target_keyword" value={values.target_keyword} onChange={set("target_keyword")} maxLength={80} placeholder="e.g. modular construction" className={`${inputClass} ${border(Boolean(err("target_keyword")))}`} />
+            </div>
+
+            <fieldset>
+              <legend className="text-sm font-medium">Target keywords</legend>
+              <p className="text-xs text-muted">One main keyword, plus up to two more. Start typing to pick from the keyword library, or write your own.</p>
+              <div className="mt-1 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label htmlFor="target_keyword" className="text-xs text-muted">Main keyword</label>
+                  <input id="target_keyword" name="target_keyword" list="keyword-library" value={values.target_keyword} onChange={set("target_keyword")} maxLength={80} placeholder="e.g. EPC consulting services" className={`${inputClass} ${border(Boolean(err("target_keyword") ?? issue("target_keyword")))}`} />
+                </div>
+                <div>
+                  <label htmlFor="secondary_keyword_1" className="text-xs text-muted">Second (optional)</label>
+                  <input id="secondary_keyword_1" name="secondary_keyword_1" list="keyword-library" value={values.secondary_keyword_1} onChange={set("secondary_keyword_1")} maxLength={80} className={`${inputClass} ${border(Boolean(err("secondary_keywords")))}`} />
+                </div>
+                <div>
+                  <label htmlFor="secondary_keyword_2" className="text-xs text-muted">Third (optional)</label>
+                  <input id="secondary_keyword_2" name="secondary_keyword_2" list="keyword-library" value={values.secondary_keyword_2} onChange={set("secondary_keyword_2")} maxLength={80} className={`${inputClass} ${border(Boolean(err("secondary_keywords")))}`} />
+                </div>
               </div>
+              <datalist id="keyword-library">
+                {keywords.map((k) => <option key={k} value={k} />)}
+              </datalist>
+              {note("target_keyword", err("secondary_keywords"))}
+            </fieldset>
+
+            <div>
+              <div className="flex items-baseline justify-between gap-2">
+                <label htmlFor="tags" className="text-sm font-medium">Tags</label>
+                <span className={`text-xs ${tagList.length > LIMITS.maxTags ? "font-semibold text-danger" : "text-muted"}`}>{tagList.length} / {LIMITS.maxTags}</span>
+              </div>
+              <input id="tags" name="tags" value={values.tags} onChange={set("tags")} maxLength={400} placeholder="e.g. pipeline engineering, alberta, cost control" aria-describedby="tags-help" className={`${inputClass} ${border(Boolean(err("tags") ?? issue("tags")) || badTags.length > 0)}`} />
+              {tagList.length > 0 ? (
+                <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Tags as they will be saved">
+                  {tagList.map((t) => (
+                    <li key={t} className={`rounded-full px-2 py-0.5 text-xs font-medium ${TAG_PATTERN.test(t) ? "bg-primary/10 text-primary" : "bg-danger/10 text-danger"}`}>{t}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {note("tags", badTags.length > 0 ? "Tags are 2 to 30 characters: letters, numbers, spaces, & and hyphens." : tagList.length > LIMITS.maxTags ? `Use ${LIMITS.maxTags} tags or fewer.` : undefined) ?? (
+                <p id="tags-help" className="mt-1 text-xs text-muted">Separate tags with commas. They group related articles on the site.</p>
+              )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="author_name" className="text-sm font-medium">Author</label>
-                <input id="author_name" name="author_name" value={values.author_name} onChange={set("author_name")} maxLength={100} placeholder={ownerName} className={`${inputClass} ${border(Boolean(err("author_name")))}`} />
+                <input id="author_name" name="author_name" value={values.author_name} onChange={set("author_name")} maxLength={100} placeholder={ownerName} className={`${inputClass} ${border(Boolean(err("author_name") ?? issue("author_name")))}`} />
+                {note("author_name")}
               </div>
               <div>
                 <label htmlFor="publish_date" className="text-sm font-medium">Publish date</label>
-                <input id="publish_date" name="publish_date" type="date" value={values.publish_date} onChange={set("publish_date")} className={`${inputClass} ${border(Boolean(err("publish_date")))}`} />
-                {err("publish_date") ? <p className="mt-1 text-sm text-danger">{err("publish_date")}</p> : null}
+                <input id="publish_date" name="publish_date" type="date" value={values.publish_date} onChange={set("publish_date")} className={`${inputClass} ${border(Boolean(err("publish_date") ?? issue("publish_date")))}`} />
+                {note("publish_date")}
               </div>
             </div>
           </div>

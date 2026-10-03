@@ -5,6 +5,7 @@ import { FormMessage } from "@/components/form-fields";
 import { StatusBadge, CountChip } from "@/components/status-badge";
 import { requireActiveUser } from "@/lib/auth";
 import { blockingProblemsFor } from "@/lib/content/rules";
+import { siteContextFor } from "@/lib/content/site-context";
 import { STATUSES, statusMeta, timeAgo, requestNow, FORMER_MEMBER } from "@/lib/content/status";
 import { loadBoard, parseBoardParams, PAGE_SIZE, type BoardParams } from "@/lib/content/board-query";
 
@@ -162,7 +163,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
       ) : (
         <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
           {board.rows.map((a) => {
-            const problems = a.status === "draft" ? blockingProblemsFor(a).length : 0;
+            const problems = a.status === "draft" ? blockingProblemsFor(a, siteContextFor(board.sitePages, a.id)).length : 0;
             const warnings = a.article_checks.filter((c) => c.result !== "pass").length;
             return (
               <li key={a.id}>
@@ -171,6 +172,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={a.status} />
                       <span className={`font-medium ${a.title ? "" : "italic text-muted"}`}>{a.title || "Untitled draft"}</span>
+                      {a.source === "ai_draft" ? <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">AI draft</span> : null}
                     </div>
                     <p className="mt-1 text-sm text-muted">
                       {[a.content_types?.label, a.service_areas?.label].filter(Boolean).join(" · ") || "No type or area yet"}

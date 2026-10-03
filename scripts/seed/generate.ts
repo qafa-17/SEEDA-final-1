@@ -4,13 +4,22 @@
  *   npx tsx scripts/seed/generate.ts            # 150 articles (default)
  *   ARTICLES=300 npx tsx scripts/seed/generate.ts
  *
- * Writes supabase/seed/seed.sql (paste into the Supabase SQL Editor).
+ * Writes supabase/seed/seed_part*.sql (paste into the Supabase SQL Editor, in order).
+ * Run migration 0005 first: the data uses its service areas, tags and keywords.
  * Everything is fictional and marked so it can be removed cleanly:
  * people use @example.com addresses, articles' Drive ids start with "seed_".
  * A fixed random seed means the same input always gives the same output.
  */
-import { writeFileSync } from "node:fs";
-import { LIMITS, blockingProblems, guidelineChecks, slugify, type ArticleFields } from "../../src/lib/content/rules";
+import { readFileSync, writeFileSync } from "node:fs";
+import { LIMITS, blockingProblems, guidelineChecks, slugify, type ArticleFields, type SiteContext } from "../../src/lib/content/rules";
+
+// The live site's pages and the keyword library are read straight from the
+// migration that creates them, so the sample data can never drift from them.
+const migration = readFileSync("supabase/migrations/0005_scope_corrections.sql", "utf8");
+const sitePaths = [...migration.matchAll(/^\s*\('(\/[a-z0-9\/_-]*)', '/gm)].map((m) => m[1]);
+const library = new Set([...migration.matchAll(/\(\d, '((?:[^']|'')+)'\)/g)].map((m) => m[1].replace(/''/g, "'").toLowerCase()));
+if (sitePaths.length < 20 || library.size < 70) throw new Error("Could not read site pages or keywords from migration 0005");
+const site: SiteContext = { sitePaths, reservedSlugs: sitePaths.filter((p) => p.startsWith("/resources/")).map((p) => p.slice("/resources/".length)) };
 
 const ARTICLE_COUNT = Number(process.env.ARTICLES ?? 150);
 const NOW = Date.parse("2026-10-01T15:00:00Z"); // fixed "today" so output is repeatable
@@ -54,33 +63,43 @@ const approvers = team.filter((p) => p.role === "approver");
 const publishers = team.filter((p) => p.access === "active");
 
 // ---------- subject matter ----------
-type Topic = { area: "engineering" | "procurement" | "construction" | "management"; keyword: string; noun: string };
+// keyword = a phrase from the owner's keyword library; noun = how it reads mid-sentence.
+type Topic = { area: string; keyword: string; noun: string };
 const topics: Topic[] = [
-  { area: "engineering", keyword: "front-end engineering design", noun: "FEED" },
-  { area: "engineering", keyword: "brownfield tie-ins", noun: "brownfield tie-in work" },
-  { area: "engineering", keyword: "3D laser scanning", noun: "3D laser scanning" },
-  { area: "engineering", keyword: "HAZOP reviews", noun: "HAZOP review" },
-  { area: "engineering", keyword: "constructability reviews", noun: "constructability review" },
-  { area: "engineering", keyword: "electrical load studies", noun: "electrical load study" },
-  { area: "procurement", keyword: "long-lead equipment", noun: "long-lead equipment" },
-  { area: "procurement", keyword: "vendor qualification", noun: "vendor qualification" },
-  { area: "procurement", keyword: "expediting", noun: "expediting" },
-  { area: "procurement", keyword: "modular fabrication contracts", noun: "modular fabrication contracting" },
-  { area: "procurement", keyword: "supply chain risk", noun: "supply chain risk management" },
-  { area: "procurement", keyword: "bid evaluation", noun: "bid evaluation" },
-  { area: "construction", keyword: "modular construction", noun: "modular construction" },
-  { area: "construction", keyword: "winter construction", noun: "winter construction" },
-  { area: "construction", keyword: "turnaround planning", noun: "turnaround planning" },
-  { area: "construction", keyword: "site logistics", noun: "site logistics" },
-  { area: "construction", keyword: "commissioning", noun: "commissioning" },
-  { area: "construction", keyword: "workforce camps", noun: "workforce camp planning" },
-  { area: "management", keyword: "stage-gate project controls", noun: "stage-gate project control" },
-  { area: "management", keyword: "cost estimating", noun: "cost estimating" },
-  { area: "management", keyword: "schedule risk analysis", noun: "schedule risk analysis" },
-  { area: "management", keyword: "owner's representative services", noun: "owner's representation" },
-  { area: "management", keyword: "change management", noun: "change management" },
-  { area: "management", keyword: "contractor performance", noun: "contractor performance management" },
+  { area: "engineering", keyword: "EPC engineering", noun: "EPC engineering" },
+  { area: "engineering", keyword: "Engineering consultancy", noun: "engineering consultancy" },
+  { area: "engineering", keyword: "Calgary engineering company", noun: "local engineering support" },
+  { area: "engineering", keyword: "Integrated EPC solutions", noun: "integrated EPC delivery" },
+  { area: "procurement", keyword: "Procurement", noun: "procurement" },
+  { area: "procurement", keyword: "EPC contracting", noun: "EPC contracting" },
+  { area: "construction", keyword: "EPC construction", noun: "EPC construction" },
+  { area: "construction", keyword: "Pre construction", noun: "pre-construction planning" },
+  { area: "construction", keyword: "Design build", noun: "design-build delivery" },
+  { area: "project-management", keyword: "Construction project management", noun: "construction project management" },
+  { area: "project-management", keyword: "Cost control", noun: "cost control" },
+  { area: "project-management", keyword: "Agile project management", noun: "agile project management" },
+  { area: "project-management", keyword: "Project development plan", noun: "project development planning" },
+  { area: "project-management", keyword: "CAPEX optimization services", noun: "CAPEX optimization" },
+  { area: "project-management", keyword: "EPC project management consultants", noun: "EPC project management" },
+  { area: "c2b-c2c-contracts", keyword: "EPC contracts", noun: "EPC contract management" },
+  { area: "c2b-c2c-contracts", keyword: "Claims", noun: "claims management" },
+  { area: "civil-engineering", keyword: "Civil engineering", noun: "civil engineering" },
+  { area: "facilities-engineering", keyword: "Facilities engineering", noun: "facilities engineering" },
+  { area: "pipeline-engineering", keyword: "Pipeline engineering specialists", noun: "pipeline engineering" },
+  { area: "specialists", keyword: "Fractional engineer", noun: "fractional engineering support" },
+  { area: "specialists", keyword: "Independent peer review engineering", noun: "independent peer review" },
+  { area: "specialists", keyword: "Pre-vetted EPCM specialists", noun: "specialist staffing" },
+  { area: "structural-engineering", keyword: "Structural engineer", noun: "structural engineering" },
+  { area: "water-management", keyword: "Industrial water engineering", noun: "industrial water engineering" },
+  { area: "water-management", keyword: "Environmental engineering compliance", noun: "environmental compliance" },
+  { area: "worksite-management", keyword: "Construction management", noun: "construction management" },
+  { area: "worksite-management", keyword: "Workface construction", noun: "workface planning" },
 ];
+for (const t of topics) {
+  if (!library.has(t.keyword.toLowerCase())) throw new Error(`Not in the keyword library: ${t.keyword}`);
+  if (!sitePaths.includes(`/services/${t.area}`)) throw new Error(`Not a service page: ${t.area}`);
+}
+const areaLabel = (slug: string) => slug.split("-").map((w) => (w === "c2b" || w === "c2c" ? w.toUpperCase() : w)).join(" ");
 const sectors = ["Oil and Gas", "Mining", "Power and Utilities", "Water and Wastewater", "Petrochemicals", "Renewables"];
 // t = how the region reads in a title ("Oil Sands Projects"); p = in a sentence ("in the Oil Sands region").
 const regions = [
@@ -102,10 +121,10 @@ const titleCase = (s: string) =>
 function titleFor(t: Topic, type: (typeof types)[number], sector: string, region: string, facility: string): string {
   const options =
     type === "case-study"
-      ? [`Case Study: ${cap(t.noun)} on ${an(region)} ${region} ${cap(facility)}`, `How ${cap(t.keyword)} Kept ${an(sector)} ${sector} Project on Track`, `Case Study: ${cap(t.keyword)} at ${an(facility)} ${cap(facility)}`]
+      ? [`Case Study: ${cap(t.noun)} on ${an(region)} ${region} ${cap(facility)}`, `${t.keyword}: Lessons from ${an(region)} ${region} ${cap(facility)}`, `Case Study: ${cap(t.noun)} at ${an(facility)} ${cap(facility)}`]
       : type === "whitepaper"
-        ? [`A Practical Guide to ${cap(t.keyword)} in ${sector}`, `${cap(t.keyword)}: What ${sector} Owners Should Know`, `${cap(t.keyword)} for ${region} Projects`]
-        : [`${between(3, 7)} Lessons on ${cap(t.keyword)} from ${region} Projects`, `The Case for ${cap(t.keyword)} on ${sector} Projects`, `${cap(t.keyword)} on ${sector} Sites: Common Pitfalls`];
+        ? [`A Practical Guide to ${cap(t.noun)} in ${sector}`, `${t.keyword}: What ${sector} Owners Should Know`, `${t.keyword} for ${region} Projects`]
+        : [`${between(3, 7)} Lessons on ${cap(t.noun)} from ${region} Projects`, `The Case for ${cap(t.noun)} on ${sector} Projects`, `${t.keyword} on ${sector} Sites: Common Pitfalls`];
   return titleCase(pick(options));
 }
 
@@ -136,10 +155,13 @@ const headingBank = [
   "Planning for {region} conditions", "Working with contractors", "Measuring results", "Getting started", "Key risks to watch",
 ];
 const linkBank = [
-  "[our {area} services](/services/{area})",
-  "[other Knowledge Hub articles](/knowledge-hub)",
+  "[our {areaLabel} services](/services/{area})",
+  "[other articles in Resources](/resources)",
+  "[how EPCMst works](/how-it-works)",
   "[the EPCMst project approach](/about)",
 ];
+// A page that doesn't exist, so a few articles show the "broken link" tip.
+const brokenLink = "[our project controls page](/services/project-controls)";
 
 function fill(s: string, ctx: Record<string, string>) {
   return s.replace(/\{(\w+)\}/g, (_, k) => ctx[k] ?? "");
@@ -157,8 +179,8 @@ function paragraph(ctx: Record<string, string>, n: number) {
   return out.join(" ");
 }
 
-function body(ctx: Record<string, string>, opts: { words: number; keywordInIntro: boolean; subheadings: boolean; link: boolean }) {
-  const intro = (opts.keywordInIntro ? `${cap(ctx.keyword)} is one of the decisions that shapes every ${ctx.sector} project in ${ctx.region}. ` : "")
+function body(ctx: Record<string, string>, opts: { words: number; keywordInIntro: boolean; subheadings: boolean; link: boolean; broken: boolean; extras: string[] }) {
+  const intro = (opts.keywordInIntro ? `When ${ctx.sector} owners in ${ctx.region} search for "${ctx.keyword}", they usually want one thing: a project that stays on budget and on schedule. ` : "")
     + paragraph(ctx, 4);
   const parts = [intro];
   let words = intro.split(/\s+/).length;
@@ -170,15 +192,16 @@ function body(ctx: Record<string, string>, opts: { words: number; keywordInIntro
     parts.push(p);
     words += p.split(/\s+/).length;
   }
-  if (opts.link) parts.push(`For related work, see ${fill(pick(linkBank), ctx)}.`);
+  if (opts.extras.length) parts.push(`Clients often ask about this alongside ${opts.extras.map((k) => `"${k}"`).join(" and ")}, and the same habits apply.`);
+  if (opts.link) parts.push(`For related work, see ${opts.broken ? brokenLink : fill(pick(linkBank), ctx)}.`);
   return parts.join("\n\n");
 }
 
 function metaFor(t: Topic, sector: string, region: string, includeKeyword: boolean): string {
   const options = includeKeyword
     ? [
-        `How ${t.keyword} can cut cost and schedule risk on ${sector} projects in ${region}, with practical steps from EPCM teams.`,
-        `A practical look at ${t.keyword} for ${sector} owners in ${region}: where projects go wrong and what good looks like.`,
+        `${t.keyword}: how ${t.noun} cuts cost and schedule risk on ${sector} projects in ${region}.`,
+        `${t.keyword} for ${sector} owners in ${region}: where projects go wrong and what good looks like.`,
       ]
     : [`Practical lessons from ${sector} projects in ${region} on reducing cost and schedule risk before construction starts.`];
   return pick(options);
@@ -214,7 +237,7 @@ for (let i = 0; i < ARTICLE_COUNT; i++) {
   const t = pick(topics), sector = pick(sectors), reg = pick(regions), region = reg.p, facility = pick(facilities), type = pickType();
   const status = pickStatus();
   const owner = pick(publishers);
-  const ctx = { sector, region, facility, noun: t.noun, keyword: t.keyword, area: t.area };
+  const ctx = { sector, region, facility, noun: t.noun, keyword: t.keyword, area: t.area, areaLabel: areaLabel(t.area) };
   const complete = status !== "draft" || chance(0.35); // most drafts are still being filled in
   // Leave enough time before "today" for this status's whole history.
   const minAgeDays = { draft: 1, in_review: 14, approved: 26, published: 36 }[status];
@@ -224,27 +247,35 @@ for (let i = 0; i < ARTICLE_COUNT; i++) {
   // may break them on purpose further down.
   let title: string | null = titleFor(t, type, sector, reg.t, facility);
   for (let tries = 0; title.length > LIMITS.titleMax && tries < 20; tries++) title = titleFor(t, type, sector, pick(["Alberta", "BC"]), facility);
-  if (title.length > LIMITS.titleMax) title = `${cap(t.keyword)} in ${sector}`.slice(0, LIMITS.titleMax);
+  if (title.length > LIMITS.titleMax) title = titleCase(`${t.keyword} in ${sector}`).slice(0, LIMITS.titleMax);
   let slug: string | null = slugify(title);
   for (let n = 2; slug && usedSlugs.has(slug); n++) slug = `${slugify(title).slice(0, 75)}-${n}`;
   const withKw = chance(0.85);
   let meta: string | null = metaFor(t, sector, region, withKw);
   for (let tries = 0; (meta.length > LIMITS.metaMax || meta.length < LIMITS.metaMin) && tries < 20; tries++) meta = metaFor(t, sector, pick(["Alberta", "BC"]), withKw);
-  if (meta.length > LIMITS.metaMax) meta = `Practical lessons on ${t.keyword} for ${sector} owners, from EPCM teams working across Western Canada.`.slice(0, LIMITS.metaMax);
+  if (meta.length > LIMITS.metaMax || meta.length < LIMITS.metaMin) meta = `${t.keyword}: practical lessons for ${sector} owners, from EPCM teams working across Western Canada.`.slice(0, LIMITS.metaMax);
   let keyword: string | null = t.keyword;
   let author: string | null = chance(0.6) ? owner.name : "EPCMst Team";
   let publishDate: string | null = isoDate(created + between(14, 60) * DAY);
   let typeSlug: string | null = type, areaSlug: string | null = t.area;
   let words = between(350, 850);
-  let text = body(ctx, { words, keywordInIntro: chance(0.75), subheadings: chance(0.85), link: chance(0.6) });
+  // Up to two extra keywords, drawn from other topics.
+  const extraCount = pick([0, 0, 1, 1, 1, 2]);
+  const extras: string[] = [];
+  while (extras.length < extraCount) {
+    const k = pick(topics).keyword;
+    if (k !== t.keyword && !extras.includes(k)) extras.push(k);
+  }
+  let tags: string[] = [...new Set([t.area, ...(chance(0.7) ? [sector.toLowerCase()] : []), ...(chance(0.5) ? [reg.t.toLowerCase()] : [])])];
+  let text = body(ctx, { words, keywordInIntro: chance(0.75), subheadings: chance(0.85), link: chance(0.65), broken: chance(0.08), extras: chance(0.75) ? extras : [] });
 
   if (!complete) {
     // Realistic gaps and mistakes in work-in-progress drafts.
     const gaps = between(1, 4);
     for (let g = 0; g < gaps; g++) {
-      const which = between(0, 8);
+      const which = between(0, 9);
       if (which === 0) meta = null;
-      if (which === 1) meta = `${cap(t.keyword)} on ${sector} projects.`; // too short
+      if (which === 1) meta = `${t.keyword} on ${sector} projects.`; // too short
       if (which === 2) meta = metaFor(t, sector, region, true) + " Includes a checklist for owners, contractors and site teams working through the next season."; // too long
       if (which === 3) slug = null;
       if (which === 4) keyword = null;
@@ -252,6 +283,7 @@ for (let i = 0; i < ARTICLE_COUNT; i++) {
       if (which === 6) publishDate = null;
       if (which === 7) { typeSlug = null; areaSlug = null; }
       if (which === 8) author = null;
+      if (which === 9) tags = [];
     }
     if (chance(0.08)) { text = ""; words = 0; } // imported, body not converted yet
   }
@@ -261,14 +293,15 @@ for (let i = 0; i < ARTICLE_COUNT; i++) {
     id: uuid(), drive_file_id: driveId(), drive_modified_at: iso(created - between(1, 10) * DAY),
     title, slug, meta_description: meta, content_type_id: typeSlug ? types.indexOf(typeSlug as (typeof types)[number]) + 1 : null,
     service_area_id: areaSlug ? 1 : null, target_keyword: keyword, author_name: author, publish_date: publishDate, body_markdown: text,
+    tags, secondary_keywords: extras,
     type: typeSlug ?? "", area: areaSlug ?? "", status, owner_id: owner.id,
     submitted_at: null, approved_by: null, approved_at: null, published_at: null, published_url: null,
     created_at: created, updated_at: created, events: [], jobs: [],
   };
 
   // Non-drafts must pass the blocking rules, exactly as the database demands.
-  if (status !== "draft" && blockingProblems(a).length > 0) {
-    throw new Error(`Generator bug: ${status} article fails blocking rules: ${blockingProblems(a).join(" ")}`);
+  if (status !== "draft" && blockingProblems(a, site).length > 0) {
+    throw new Error(`Generator bug: ${status} article fails blocking rules: ${blockingProblems(a, site).join(" ")}`);
   }
 
   // History, consistent with the status and in time order.
@@ -302,7 +335,7 @@ for (let i = 0; i < ARTICLE_COUNT; i++) {
       a.jobs.push({ state: "verified", requested_by: approver.id, at, http: 200, sitemap: true, error: null, pr: prNumber++ });
       a.events.push({ kind: "published", from: "approved", to: "published", actor: approver.id, note: null, at });
       a.published_at = at;
-      a.published_url = `https://demo.example.com/knowledge-hub/${a.slug}`;
+      a.published_url = `https://demo.example.com/resources/${a.slug}`;
     }
   }
   if (at > NOW) throw new Error("Generator bug: event in the future");
@@ -313,6 +346,7 @@ for (let i = 0; i < ARTICLE_COUNT; i++) {
 // ---------- SQL output: split into parts small enough to paste ----------
 const q = (v: string | null) => (v === null ? "null" : `'${v.replace(/'/g, "''")}'`);
 const qt = (ms: number | null) => (ms === null ? "null" : `'${iso(ms)}'`);
+const qa = (xs: string[]) => (xs.length ? `array[${xs.map(q).join(", ")}]` : "'{}'");
 const lookup = (table: string, slug: string) => (slug ? `(select id from public.${table} where slug = ${q(slug)})` : "null");
 
 const PER_PART = 50;
@@ -355,9 +389,9 @@ alter table public.articles disable trigger articles_log_created;
 alter table public.articles disable trigger articles_set_updated_at;
 `);
   for (const a of chunk) {
-    out.push(`insert into public.articles (id, drive_file_id, drive_modified_at, title, slug, meta_description, content_type_id, service_area_id, target_keyword, author_name, publish_date, body_markdown, status, owner_id, submitted_at, approved_by, approved_at, published_at, published_url, created_at, updated_at) values ('${a.id}', '${a.drive_file_id}', '${a.drive_modified_at}', ${q(a.title)}, ${q(a.slug)}, ${q(a.meta_description)}, ${lookup("content_types", a.type)}, ${lookup("service_areas", a.area)}, ${q(a.target_keyword)}, ${q(a.author_name)}, ${q(a.publish_date)}, ${q(a.body_markdown)}, '${a.status}', '${a.owner_id}', ${qt(a.submitted_at)}, ${a.approved_by ? `'${a.approved_by}'` : "null"}, ${qt(a.approved_at)}, ${qt(a.published_at)}, ${q(a.published_url)}, ${qt(a.created_at)}, ${qt(a.updated_at)});`);
+    out.push(`insert into public.articles (id, drive_file_id, drive_modified_at, title, slug, meta_description, content_type_id, service_area_id, target_keyword, secondary_keywords, tags, author_name, publish_date, body_markdown, status, owner_id, submitted_at, approved_by, approved_at, published_at, published_url, created_at, updated_at) values ('${a.id}', '${a.drive_file_id}', '${a.drive_modified_at}', ${q(a.title)}, ${q(a.slug)}, ${q(a.meta_description)}, ${lookup("content_types", a.type)}, ${lookup("service_areas", a.area)}, ${q(a.target_keyword)}, ${qa(a.secondary_keywords)}, ${qa(a.tags)}, ${q(a.author_name)}, ${q(a.publish_date)}, ${q(a.body_markdown)}, '${a.status}', '${a.owner_id}', ${qt(a.submitted_at)}, ${a.approved_by ? `'${a.approved_by}'` : "null"}, ${qt(a.approved_at)}, ${qt(a.published_at)}, ${q(a.published_url)}, ${qt(a.created_at)}, ${qt(a.updated_at)});`);
   }
-  const jobs = chunk.flatMap((a) => a.jobs.map((j) => `  ('${a.id}', '${j.requested_by}', '${j.state}', 'publish/${a.slug}', ${j.pr}, 'https://github.com/example/knowledge-hub-demo/pull/${j.pr}', ${q(a.published_url ?? `https://demo.example.com/knowledge-hub/${a.slug}`)}, ${j.http ?? "null"}, ${j.sitemap ?? "null"}, ${q(j.error)}, ${qt(j.at)}, ${qt(j.at)})`));
+  const jobs = chunk.flatMap((a) => a.jobs.map((j) => `  ('${a.id}', '${j.requested_by}', '${j.state}', 'publish/${a.slug}', ${j.pr}, 'https://github.com/example/knowledge-hub-demo/pull/${j.pr}', ${q(a.published_url ?? `https://demo.example.com/resources/${a.slug}`)}, ${j.http ?? "null"}, ${j.sitemap ?? "null"}, ${q(j.error)}, ${qt(j.at)}, ${qt(j.at)})`));
   out.push(`
 alter table public.articles enable trigger articles_log_created;
 alter table public.articles enable trigger articles_set_updated_at;
@@ -372,7 +406,7 @@ ${jobs.join(",\n")};
 ` : ""}
 -- Guideline checks (same rules the app uses)
 insert into public.article_checks (article_id, rule_key, result, message, checked_at) values
-${chunk.flatMap((a) => guidelineChecks(a).map((c) => `  ('${a.id}', '${c.rule_key}', '${c.result}', ${q(c.message)}, ${qt(a.updated_at)})`)).join(",\n")};
+${chunk.flatMap((a) => guidelineChecks(a, site).map((c) => `  ('${a.id}', '${c.rule_key}', '${c.result}', ${q(c.message)}, ${qt(a.updated_at)})`)).join(",\n")};
 
 commit;
 `);
@@ -382,10 +416,14 @@ commit;
 }
 
 const byStatus = Object.fromEntries(statusMix.map(([s]) => [s, articles.filter((a) => a.status === s).length]));
-const draftsWithProblems = articles.filter((a) => a.status === "draft" && blockingProblems(a).length > 0).length;
+const draftsWithProblems = articles.filter((a) => a.status === "draft" && blockingProblems(a, site).length > 0).length;
+const tipCounts: Record<string, number> = {};
+for (const a of articles) for (const c of guidelineChecks(a, site)) if (c.result !== "pass") tipCounts[c.rule_key] = (tipCounts[c.rule_key] ?? 0) + 1;
 console.log(JSON.stringify({ articles: articles.length, parts, byStatus, draftsWithProblems,
   events: articles.reduce((n, a) => n + a.events.length, 0), jobs: articles.reduce((n, a) => n + a.jobs.length, 0),
-  checks: articles.length * 7, totalKB: Math.round(totalKB) }, null, 2));
+  checks: articles.length * guidelineChecks(articles[0], site).length, tipCounts,
+  keywordsUsed: new Set(articles.flatMap((a) => [a.target_keyword, ...a.secondary_keywords]).filter(Boolean)).size,
+  longestTitle: Math.max(...articles.filter((a) => a.status !== "draft").map((a) => a.title?.length ?? 0)), totalKB: Math.round(totalKB) }, null, 2));
 
 // ---------- removal script ----------
 writeFileSync("supabase/seed/remove_seed.sql", `-- Removes ONLY the synthetic data from seed.sql: seeded articles (their

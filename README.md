@@ -47,7 +47,9 @@ Copy `.env.example` to `.env.local`. In Vercel → Settings → Environment Vari
 
 ## Tests
 
-`npm test` runs the Markdown converter tests and the Drive client tests (against a fake Google API, no network). SQL tests are in `supabase/tests/`.
+`npm test` runs the Markdown converter tests, the content-rule tests (the front-matter schema and the plain-language rules must agree) and the Drive client tests (against a fake Google API, no network).
+
+`supabase/tests/run.sh` runs every SQL test suite against a local Postgres, each in a fresh database: `PSQL="psql -h <socket dir> -p <port> -U postgres" supabase/tests/run.sh`.
 
 ## Run locally
 

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DRIVE_ID, driveErrorMessage, exportDocMarkdown, getFolderDoc } from "@/lib/drive";
 import { cleanDocMarkdown, titleFromDocName } from "@/lib/content/convert";
 import { guidelineChecks, slugify, type ArticleFields } from "@/lib/content/rules";
+import { loadSiteContext } from "@/lib/content/site-context";
 
 export type ImportState = { message?: string };
 
@@ -36,8 +37,11 @@ export async function importDoc(_prev: ImportState, fd: FormData): Promise<Impor
   const title = titleFromDocName(doc.name);
   const converted = cleanDocMarkdown(raw, doc.name);
 
-  // Suggest a URL from the title if nobody uses it yet; otherwise leave it for the publisher.
+  // Suggest a URL from the title if nobody uses it yet (in the hub or on
+  // the live site); otherwise leave it for the publisher.
+  const site = await loadSiteContext(supabase);
   let slug: string | null = slugify(title) || null;
+  if (slug && site.reservedSlugs.includes(slug)) slug = null;
   if (slug) {
     const { data: taken } = await supabase.from("articles").select("id").eq("slug", slug).maybeSingle();
     if (taken) slug = null;
@@ -53,11 +57,13 @@ export async function importDoc(_prev: ImportState, fd: FormData): Promise<Impor
     author_name: user.fullName || null,
     publish_date: null,
     body_markdown: converted.markdown,
+    tags: [],
+    secondary_keywords: [],
   };
 
   const { data: created, error } = await supabase
     .from("articles")
-    .insert({ drive_file_id: fileId, drive_modified_at: doc.modifiedTime, ...fields })
+    .insert({ drive_file_id: fileId, drive_modified_at: doc.modifiedTime, source: "google_doc", ...fields })
     .select("id")
     .single();
 
@@ -74,7 +80,7 @@ export async function importDoc(_prev: ImportState, fd: FormData): Promise<Impor
 
   const now = new Date().toISOString();
   await supabase.from("article_checks").upsert(
-    guidelineChecks(fields).map((c) => ({ article_id: created.id, rule_key: c.rule_key, result: c.result, message: c.message, checked_at: now })),
+    guidelineChecks(fields, site).map((c) => ({ article_id: created.id, rule_key: c.rule_key, result: c.result, message: c.message, checked_at: now })),
     { onConflict: "article_id,rule_key" },
   );
 

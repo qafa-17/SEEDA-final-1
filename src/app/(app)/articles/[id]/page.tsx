@@ -9,7 +9,8 @@ import { requireActiveUser } from "@/lib/auth";
 import { ArticleEditor } from "./editor";
 import { WorkflowActions } from "./workflow";
 import { createClient } from "@/lib/supabase/server";
-import { LIMITS, blockingProblems, type ArticleFields } from "@/lib/content/rules";
+import { LIMITS, SITE_PREFIX, blockingProblems, type ArticleFields } from "@/lib/content/rules";
+import { loadSiteContext } from "@/lib/content/site-context";
 import {
   eventLabels, publishStateLabels, formatDate, formatDateTime, FORMER_MEMBER, type ArticleStatus,
 } from "@/lib/content/status";
@@ -19,6 +20,7 @@ export const metadata: Metadata = { title: "Article" };
 type ArticleRow = ArticleFields & {
   id: string;
   drive_file_id: string;
+  source: "google_doc" | "ai_draft";
   status: ArticleStatus;
   word_count: number;
   owner_id: string | null;
@@ -38,9 +40,11 @@ const checkLabels: Record<string, string> = {
   keyword_in_slug: "Keyword in URL",
   keyword_in_meta: "Keyword in meta description",
   keyword_in_intro: "Keyword in first paragraph",
+  extra_keywords_used: "Extra keywords in the text",
   min_length: "Length",
   has_subheading: "Has subheadings",
   internal_link: "Links to another EPCMst page",
+  links_work: "Links point to real pages",
 };
 
 function Field({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
@@ -62,10 +66,10 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
   if (!z.uuid().safeParse(id).success) notFound();
 
   const supabase = await createClient();
-  const [articleRes, eventsRes, checksRes, jobsRes, typesRes, areasRes] = await Promise.all([
+  const [articleRes, eventsRes, checksRes, jobsRes, typesRes, areasRes, keywordsRes, site] = await Promise.all([
     supabase
       .from("articles")
-      .select("id, drive_file_id, title, slug, meta_description, content_type_id, service_area_id, target_keyword, author_name, publish_date, body_markdown, word_count, status, owner_id, created_at, updated_at, published_url, content_types(label), service_areas(label), owner:profiles!articles_owner_id_fkey(full_name)")
+      .select("id, drive_file_id, title, slug, meta_description, content_type_id, service_area_id, target_keyword, secondary_keywords, tags, source, author_name, publish_date, body_markdown, word_count, status, owner_id, created_at, updated_at, published_url, content_types(label), service_areas(label), owner:profiles!articles_owner_id_fkey(full_name)")
       .eq("id", id)
       .maybeSingle(),
     supabase.from("article_events").select("id, kind, note, created_at, actor_id, actor:profiles(full_name)").eq("article_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }),
@@ -73,6 +77,8 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
     supabase.from("publish_jobs").select("id, state, pr_url, live_url, http_status, in_sitemap, error_message, created_at").eq("article_id", id).order("created_at", { ascending: false }),
     supabase.from("content_types").select("id, label").order("sort_order"),
     supabase.from("service_areas").select("id, label").order("sort_order"),
+    supabase.from("keywords").select("phrase").order("phrase"),
+    loadSiteContext(supabase, id),
   ]);
 
   const a = articleRes.data as unknown as ArticleRow | null;
@@ -83,7 +89,7 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
     (x, y) => Object.keys(checkLabels).indexOf(x.rule_key) - Object.keys(checkLabels).indexOf(y.rule_key),
   );
   const jobs = (jobsRes.data ?? []) as JobRow[];
-  const problems = blockingProblems(a);
+  const problems = blockingProblems(a, site);
   const isSample = a.drive_file_id.startsWith("seed_");
   const ownerName = a.owner_id ? a.owner?.full_name || "Unnamed member" : FORMER_MEMBER;
   const isOwner = a.owner_id === user.id;
@@ -154,11 +160,12 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={a.status} />
+            {a.source === "ai_draft" ? <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">AI draft, needs expert review</span> : null}
             {isSample ? <span className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-muted">Sample data</span> : null}
           </div>
           <h1 className={`mt-2 font-display text-2xl font-bold ${a.title ? "" : "italic text-muted"}`}>{a.title || "Untitled draft"}</h1>
           <p className="mt-1 text-sm text-muted">
-            Owned by {ownerName} · imported {formatDate(a.created_at)} · updated {formatDate(a.updated_at)}
+            Owned by {ownerName} · {a.source === "ai_draft" ? "generated" : "imported"} {formatDate(a.created_at)} · updated {formatDate(a.updated_at)}
           </p>
         </div>
         {isSample ? null : (
@@ -212,6 +219,8 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
             ownerName={ownerName}
             afterForm={articleText}
             canRefresh={!isSample}
+            site={site}
+            keywords={((keywordsRes.data ?? []) as { phrase: string }[]).map((k) => k.phrase)}
           >
             {historyAndPublishing}
           </ArticleEditor>
@@ -223,11 +232,20 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
             <h2 id="details" className="font-semibold">Details</h2>
             <dl className="mt-2 divide-y divide-border">
               <Field label="Title" value={a.title} hint={a.title ? `${a.title.length} / ${LIMITS.titleMax}` : undefined} />
-              <Field label="URL slug" value={a.slug ? <code className="text-xs">/knowledge-hub/{a.slug}</code> : null} />
+              <Field label="URL slug" value={a.slug ? <code className="text-xs">{SITE_PREFIX}{a.slug}</code> : null} />
               <Field label="Meta description" value={a.meta_description} hint={a.meta_description ? `${a.meta_description.length} / ${LIMITS.metaMax}` : undefined} />
               <Field label="Type" value={a.content_types?.label} />
               <Field label="Service area" value={a.service_areas?.label} />
-              <Field label="Target keyword" value={a.target_keyword} />
+              <Field label="Main keyword" value={a.target_keyword} />
+              <Field label="Extra keywords" value={a.secondary_keywords.length ? a.secondary_keywords.join(", ") : <span className="italic text-muted">None</span>} />
+              <Field
+                label="Tags"
+                value={a.tags.length ? (
+                  <span className="flex flex-wrap gap-1.5">
+                    {a.tags.map((t) => <span key={t} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{t}</span>)}
+                  </span>
+                ) : null}
+              />
               <Field label="Author" value={a.author_name} />
               <Field label="Publish date" value={a.publish_date ? formatDate(`${a.publish_date}T12:00:00Z`) : null} />
               <Field label="Length" value={`${a.word_count} words`} />
