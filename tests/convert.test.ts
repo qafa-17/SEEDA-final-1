@@ -69,6 +69,12 @@ eq("tables kept", fmt.includes("| A | B |\n| - | - |\n| 1 | 2 |"), true);
 eq("quotes and nested lists kept", fmt.includes("> Quote") && fmt.includes("1. One\n   * Nested"), true);
 eq("headings left alone when there is no Heading 1", cleanDocMarkdown("## A\n\ntext\n\n### B", "T").markdown, "## A\n\ntext\n\n### B");
 
+// Bare line ends inside a paragraph become real line breaks; structure is untouched.
+eq("bare line ends become line breaks", cleanDocMarkdown("Suite 100\n123 Main St\nCalgary\n\nNext para", "T").markdown, "Suite 100  \n123 Main St  \nCalgary\n\nNext para");
+eq("backslash breaks left alone", cleanDocMarkdown("one\\\ntwo", "T").markdown, "one\\\ntwo");
+const structure = "## Head\ntext\n\n* a\n* b\n\n| A |\n| - |\n| 1 |\n\n```\nx\ny\n```\n\n> q\n> r";
+eq("headings, lists, tables, code and quotes untouched", cleanDocMarkdown(structure, "T").markdown, structure);
+
 const big = cleanDocMarkdown("word ".repeat(60_000), "x");
 eq("truncated at limit", [big.markdown.length <= MAX_BODY_CHARS, big.truncated], [true, true]);
 

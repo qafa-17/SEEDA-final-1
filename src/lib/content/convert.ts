@@ -66,7 +66,23 @@ export function cleanDocMarkdown(raw: string, docTitle: string): Converted {
     })
     .join("\n");
 
-  // 6. Tidy whitespace. Two spaces at the end of a line mean "new line, same
+  // 6. A new line inside a paragraph (Shift+Enter in the Doc) can arrive as a
+  //    bare line end, which Markdown would join into one line. When two plain
+  //    text lines sit directly under each other, the break is made explicit.
+  {
+    const plain = (l: string) => l.trim() !== "" && !/^(\s|#{1,6}\s|>|\||[-*+]\s|\d+[.)]\s|```|~~~|[-*_=]{3,}\s*$)/.test(l) && !/^\[[^\]]+\]:/.test(l);
+    const all = md.split("\n");
+    let fenced = false;
+    md = all
+      .map((l, i) => {
+        if (isFence(l)) fenced = !fenced;
+        const next = all[i + 1];
+        return !fenced && plain(l) && next !== undefined && plain(next) && !/( {2}|\\)$/.test(l) ? `${l.replace(/[ \t]+$/, "")}  ` : l;
+      })
+      .join("\n");
+  }
+
+  // 7. Tidy whitespace. Two spaces at the end of a line mean "new line, same
   //    paragraph" (Shift+Enter in the Doc), so exactly those are kept.
   md = md
     .split("\n")
