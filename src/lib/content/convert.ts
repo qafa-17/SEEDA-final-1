@@ -27,7 +27,8 @@ export function cleanDocMarkdown(raw: string, docTitle: string): Converted {
 
   // 2. Raw HTML tags are dropped (text inside them is kept). The site is
   //    built from Markdown, and HTML from a Doc must never reach a page.
-  md = md.replace(/<\/?[a-zA-Z][^<>\n]*>/g, "");
+  //    Web and email addresses written as <https://...> are links, not tags.
+  md = md.replace(/<\/?[a-zA-Z][^<>\n]*>/g, (tag) => (/^<(?:https?:\/\/|mailto:|[^\s<>@]+@[^\s<>@]+\.)/i.test(tag) ? tag : ""));
 
   // 3. Links to EPCMst's own site become relative, so they count as internal
   //    links and keep working on preview builds.
@@ -48,12 +49,31 @@ export function cleanDocMarkdown(raw: string, docTitle: string): Converted {
     const norm = (s: string) => s.replace(/\\(.)/g, "$1").replace(/[*_`]/g, "").trim().toLowerCase();
     if (h1 && norm(h1[1]) === norm(docTitle)) lines.splice(firstText, 1);
   }
-  md = lines.join("\n");
+  // 5. The page's title is its only Heading 1. If the writer used Heading 1
+  //    for sections, every heading moves down one level (1 becomes 2, 2
+  //    becomes 3...), so the outline stays the same shape.
+  const isFence = (l: string) => /^\s*(```|~~~)/.test(l);
+  let inCode = false;
+  const hasH1 = lines.some((l) => {
+    if (isFence(l)) inCode = !inCode;
+    return !inCode && /^#\s+\S/.test(l);
+  });
+  inCode = false;
+  md = lines
+    .map((l) => {
+      if (isFence(l)) inCode = !inCode;
+      return hasH1 && !inCode && /^#{1,5}\s+\S/.test(l) ? `#${l}` : l;
+    })
+    .join("\n");
 
-  // 5. Tidy whitespace.
+  // 6. Tidy whitespace. Two spaces at the end of a line mean "new line, same
+  //    paragraph" (Shift+Enter in the Doc), so exactly those are kept.
   md = md
     .split("\n")
-    .map((l) => l.replace(/[ \t]+$/g, ""))
+    .map((l) => {
+      const text = l.replace(/[ \t]+$/g, "");
+      return text !== "" && / {2,}$/.test(l) ? `${text}  ` : text;
+    })
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();

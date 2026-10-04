@@ -57,3 +57,37 @@ body {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Article text converted from a Google Doc. Tailwind resets headings, lists
+   and tables to plain text, so the formatting is put back here in one place. */
+.article-text { font-size: 0.9375rem; line-height: 1.7; overflow-wrap: anywhere; }
+.article-text > * + * { margin-top: 0.9rem; }
+.article-text h1, .article-text h2, .article-text h3, .article-text h4, .article-text h5, .article-text h6 {
+  font-family: var(--font-display); font-weight: 700; line-height: 1.3; margin-top: 1.6rem;
+}
+.article-text h1 { font-size: 1.5rem; }
+.article-text h2 { font-size: 1.3rem; }
+.article-text h3 { font-size: 1.1rem; }
+.article-text h4, .article-text h5, .article-text h6 { font-size: 1rem; }
+.article-text > :first-child { margin-top: 0; }
+.article-text strong { font-weight: 700; }
+.article-text em { font-style: italic; }
+.article-text del { text-decoration: line-through; color: var(--muted); }
+.article-text a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+.article-text ul, .article-text ol { padding-left: 1.5rem; }
+.article-text ul { list-style: disc; }
+.article-text ol { list-style: decimal; }
+.article-text ul ul { list-style: circle; }
+.article-text ol ol { list-style: lower-alpha; }
+.article-text li + li, .article-text li > ul, .article-text li > ol { margin-top: 0.3rem; }
+.article-text li > p + p { margin-top: 0.5rem; }
+.article-text blockquote { border-left: 3px solid var(--primary); padding-left: 1rem; color: var(--muted); font-style: italic; }
+.article-text hr { border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.article-text code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em; background: var(--background); border: 1px solid var(--border); border-radius: 0.25rem; padding: 0.05rem 0.3rem; }
+.article-text pre { background: var(--background); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.75rem 1rem; overflow-x: auto; }
+.article-text pre code { background: none; border: 0; padding: 0; }
+.article-text .table-scroll { overflow-x: auto; }
+.article-text table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
+.article-text th, .article-text td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+.article-text th { background: var(--background); font-weight: 600; }
+.article-text input[type="checkbox"] { margin-right: 0.4rem; }

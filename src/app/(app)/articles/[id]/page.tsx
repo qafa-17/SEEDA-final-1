@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { z } from "zod";
 import { StatusBadge, CountChip } from "@/components/status-badge";
 import { FormMessage } from "@/components/form-fields";
@@ -102,8 +103,10 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
       <h2 id="body" className="font-semibold">Article text</h2>
       {a.body_markdown.trim() ? (
         // react-markdown never renders raw HTML, so text from a Doc cannot inject scripts.
-        <div className="mt-3 space-y-3 text-sm leading-relaxed [&_a]:text-primary [&_a]:underline [&_h2]:mt-5 [&_h2]:font-display [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_ul]:list-disc">
-          <Markdown>{a.body_markdown}</Markdown>
+        <div className="article-text mt-3">
+          <Markdown remarkPlugins={[remarkGfm]} components={{ table: ({ children }) => <div className="table-scroll"><table>{children}</table></div> }}>
+            {a.body_markdown}
+          </Markdown>
         </div>
       ) : (
         <p className="mt-3 text-sm italic text-muted">No text yet. It appears here once the Doc is converted.</p>

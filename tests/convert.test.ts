@@ -46,7 +46,7 @@ eq("trailing spaces trimmed", r.markdown.endsWith("Final line."), true);
 eq("lists kept", r.markdown.includes("* First point"), true);
 
 // Title heading only removed when it matches the Doc name
-eq("different H1 kept", cleanDocMarkdown("# Something else\n\nBody", "Doc name").markdown.startsWith("# Something else"), true);
+eq("different H1 kept, as a Heading 2", cleanDocMarkdown("# Something else\n\nBody", "Doc name").markdown.startsWith("## Something else"), true);
 eq("escaped H1 still matched", cleanDocMarkdown("# Winter \\- Logistics\n\nBody", "Winter - Logistics").markdown, "Body");
 eq("inline base64 image", cleanDocMarkdown("Text ![chart](data:image/png;base64,AAAA) more", "x"), { markdown: "Text  more", imagesRemoved: 1, truncated: false });
 eq("bare domain link", cleanDocMarkdown("[Home](https://epcmst.com)", "x").markdown, "[Home](/)");
@@ -54,6 +54,21 @@ eq("lookalike domain NOT treated as own", cleanDocMarkdown("[x](https://epcmst.c
 eq("windows line endings", cleanDocMarkdown("a\r\n\r\n\r\nb", "x").markdown, "a\n\nb");
 eq("empty doc", cleanDocMarkdown("", "x"), { markdown: "", imagesRemoved: 0, truncated: false });
 eq("a < b is not a tag", cleanDocMarkdown("if a < b and c > d", "x").markdown, "if a < b and c > d");
+// Formatting that must survive
+const fmt = cleanDocMarkdown(
+  "# My Doc\n\n# Section one\n\nLine one  \nline two \n\n## Detail\n\n```\n# not a heading\n```\n\nSee <https://example.com> or <a@b.co>, **bold**, *italic*, ~~gone~~.\n\n| A | B |\n| - | - |\n| 1 | 2 |\n\n> Quote\n\n1. One\n   * Nested",
+  "My Doc",
+).markdown;
+eq("section Heading 1 becomes Heading 2", fmt.includes("\n## Section one") || fmt.startsWith("## Section one"), true);
+eq("lower headings move down too", fmt.includes("### Detail"), true);
+eq("code blocks are not touched", fmt.includes("```\n# not a heading\n```"), true);
+eq("line break inside a paragraph kept", fmt.includes("Line one  \nline two\n"), true);
+eq("plain links kept", fmt.includes("<https://example.com>") && fmt.includes("<a@b.co>"), true);
+eq("bold, italic, strikethrough kept", fmt.includes("**bold**, *italic*, ~~gone~~"), true);
+eq("tables kept", fmt.includes("| A | B |\n| - | - |\n| 1 | 2 |"), true);
+eq("quotes and nested lists kept", fmt.includes("> Quote") && fmt.includes("1. One\n   * Nested"), true);
+eq("headings left alone when there is no Heading 1", cleanDocMarkdown("## A\n\ntext\n\n### B", "T").markdown, "## A\n\ntext\n\n### B");
+
 const big = cleanDocMarkdown("word ".repeat(60_000), "x");
 eq("truncated at limit", [big.markdown.length <= MAX_BODY_CHARS, big.truncated], [true, true]);
 
