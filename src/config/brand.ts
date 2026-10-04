@@ -13,6 +13,7 @@ export const appNav: NavItem[] = [
   { href: "/board", label: "Board" },
   { href: "/import", label: "Import from Drive" },
   { href: "/keywords", label: "Keywords" },
+  { href: "/ideas", label: "Ideas" },
   { href: "/team", label: "Team" },
   { href: "/settings", label: "Settings" },
 ];

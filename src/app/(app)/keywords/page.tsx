@@ -156,6 +156,7 @@ export default async function KeywordsPage({ searchParams }: PageProps<"/keyword
                       {shown.map((k) => (
                         <li key={k.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm">
                           <span className={k.id === selectedId ? "font-semibold" : ""}>{k.phrase}</span>
+                          <span className="flex items-center gap-3">
                           {count(k) > 0 ? (
                             <Link href={href({ keyword: k.id })} className="flex items-center gap-2 underline-offset-2 hover:underline" aria-label={`See the articles targeting ${k.phrase}`}>
                               <CountChip tone="success">
@@ -166,6 +167,10 @@ export default async function KeywordsPage({ searchParams }: PageProps<"/keyword
                           ) : (
                             <span className="text-xs text-muted">No article yet</span>
                           )}
+                          <Link href={`/ideas?${new URLSearchParams({ keyword: k.phrase })}`} className="text-xs font-medium text-primary underline underline-offset-2" aria-label={`Research ${k.phrase}`}>
+                            Research
+                          </Link>
+                          </span>
                         </li>
                       ))}
                     </ul>

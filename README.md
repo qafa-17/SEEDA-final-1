@@ -44,6 +44,9 @@ Copy `.env.example` to `.env.local`. In Vercel → Settings → Environment Vari
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | no | Supabase publishable key (data is protected by Row Level Security) |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | **yes** | Full JSON key of the read-only Drive service account |
 | `DRIVE_FOLDER_ID` | no | The shared Knowledge Hub folder |
+| `TAVILY_API_KEY` | **yes** | Web search for the Ideas page |
+| `GEMINI_API_KEY` | **yes** | AI summary on the Ideas page |
+| `GEMINI_MODEL` | no | Optional: Gemini model id (default `gemini-3.5-flash-lite`) |
 
 ## Tests
 
