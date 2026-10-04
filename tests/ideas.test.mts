@@ -86,8 +86,8 @@ ok(a.summarySchema.safeParse({ ...goodSummary, angles: Array(9).fill(goodSummary
 ok(!a.summarySchema.safeParse({ ...goodSummary, intent_summary: "x".repeat(5000) }).success, "over-long text refused");
 
 // ---- regions ----
-const t = new URL(r.trendsUrl("EPC consulting & advisory", "alberta"));
-ok(t.hostname === "trends.google.com" && t.searchParams.get("geo") === "CA-AB" && t.searchParams.get("q") === "EPC consulting & advisory", "Trends link: right area, keyword safely encoded");
+const t = new URL(r.trendsUrl("EPC consulting & advisory"));
+ok(t.hostname === "trends.google.com" && t.searchParams.get("geo") === "CA" && t.searchParams.get("date") === "today 5-y" && t.searchParams.get("q") === "EPC consulting & advisory", "Trends link: Canada, five years, keyword safely encoded");
 
 console.log(fail ? `${fail} FAILED` : "ALL IDEAS TESTS PASSED");
 process.exit(fail ? 1 : 0);

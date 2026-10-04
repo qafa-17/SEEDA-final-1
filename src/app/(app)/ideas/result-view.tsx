@@ -50,6 +50,9 @@ export function ResultView({
           See interest over time in Google Trends
         </a>
       </div>
+      <p className="mt-2 text-xs text-muted sm:text-right">
+        Trends opens for all of Canada over five years. If it says there isn&apos;t enough data, the phrase is searched too rarely to chart, which is normal for specialist keywords and not a fault.
+      </p>
 
       <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="min-w-0 space-y-6">

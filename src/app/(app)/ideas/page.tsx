@@ -99,7 +99,7 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
         <ResultView
           keyword={selected.keyword}
           regionLabel={region.label}
-          trendsHref={trendsUrl(selected.keyword, selected.region)}
+          trendsHref={trendsUrl(selected.keyword)}
           byline={`Researched by ${who(selected)} · ${formatDateTime(selected.created_at)}${first(sp.reused) ? " · reused, no new search was needed" : ""}`}
           aiStatus={selected.ai_status}
           summary={summary?.success ? summary.data : null}
