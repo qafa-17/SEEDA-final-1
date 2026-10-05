@@ -21,6 +21,7 @@ export function ResultView({
   keyword,
   regionLabel,
   trendsHref,
+  trendsCountry,
   byline,
   aiStatus,
   summary,
@@ -29,6 +30,7 @@ export function ResultView({
   keyword: string;
   regionLabel: string;
   trendsHref: string;
+  trendsCountry: string; // "Canada" or "the United States"
   byline: string;
   aiStatus: "ok" | "failed" | "not_configured";
   summary: IdeaSummary | null;
@@ -51,7 +53,7 @@ export function ResultView({
         </a>
       </div>
       <p className="mt-2 text-xs text-muted sm:text-right">
-        Trends opens for all of Canada over five years. If it says there isn&apos;t enough data, the phrase is searched too rarely to chart, which is normal for specialist keywords and not a fault.
+        Trends opens for all of {trendsCountry} over five years. If it says there isn&apos;t enough data, the phrase is searched too rarely to chart, which is normal for specialist keywords and not a fault.
       </p>
 
       <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_22rem]">

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireActiveUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { changeStatusSchema, saveArticleSchema } from "@/lib/content/article-form";
-import { guidelineChecks, type ArticleFields } from "@/lib/content/rules";
+import { DEFAULT_AUTHOR, guidelineChecks, type ArticleFields } from "@/lib/content/rules";
 import { cleanDocMarkdown } from "@/lib/content/convert";
 import { loadSiteContext } from "@/lib/content/site-context";
 import { DRIVE_ID, driveErrorMessage, exportDocMarkdown, getFolderDoc } from "@/lib/drive";
@@ -53,7 +53,7 @@ export async function saveArticle(_prev: ActionState, fd: FormData): Promise<Act
     target_keyword: val(fd, "target_keyword"),
     secondary_keywords: [val(fd, "secondary_keyword_1"), val(fd, "secondary_keyword_2")],
     tags: val(fd, "tags"),
-    author_name: val(fd, "author_name"),
+    author_name: DEFAULT_AUTHOR, // one byline for every article; not editable
     publish_date: val(fd, "publish_date"),
   });
   if (!parsed.success) {

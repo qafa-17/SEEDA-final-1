@@ -53,7 +53,7 @@ function safeUrl(raw: string): string | null {
   }
 }
 
-export async function webSearch(query: string): Promise<SearchResult[]> {
+export async function webSearch(query: string, country: "canada" | "united states" = "canada"): Promise<SearchResult[]> {
   const key = process.env.TAVILY_API_KEY?.trim();
   if (!key) throw new SearchError("not_configured");
 
@@ -62,8 +62,8 @@ export async function webSearch(query: string): Promise<SearchResult[]> {
     res = await fetch(ENDPOINT, {
       method: "POST",
       headers: { "content-type": "application/json", Authorization: `Bearer ${key}` },
-      // "basic" depth costs 1 credit per search; results are limited to Canada.
-      body: JSON.stringify({ query, search_depth: "basic", topic: "general", max_results: MAX_RESULTS, country: "canada" }),
+      // "basic" depth costs 1 credit per search; results are limited to one country.
+      body: JSON.stringify({ query, search_depth: "basic", topic: "general", max_results: MAX_RESULTS, country }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: "no-store",
     });

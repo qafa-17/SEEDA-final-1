@@ -35,3 +35,6 @@ fresh; run $T/supabase_stub.sql $M/0001_profiles_and_roles.sql; users
 fresh; run $T/supabase_stub.sql $M/0001_profiles_and_roles.sql; users
        run $M/0002_content_workflow.sql $M/0003_delete_own_account.sql $M/0004_article_teams.sql \
            $M/0005_scope_corrections.sql $M/0006_idea_searches.sql $T/0006_idea_searches.test.sql; echo "ok 0006"
+fresh; run $T/supabase_stub.sql $M/0001_profiles_and_roles.sql; users
+       run $M/0002_content_workflow.sql $M/0003_delete_own_account.sql $M/0004_article_teams.sql \
+           $M/0005_scope_corrections.sql $M/0006_idea_searches.sql $M/0007_owner_feedback.sql $T/0007_owner_feedback.test.sql; echo "ok 0007"

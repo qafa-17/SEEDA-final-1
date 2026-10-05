@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import { blockingIssues, guidelineChecks, internalLinks, parseTags, wordCount, type ArticleFields, type SiteContext } from "../src/lib/content/rules";
 import { frontmatterSchema, toFrontmatter } from "../src/lib/content/schema";
+import { pageList } from "../src/lib/pagination";
 
 const good: ArticleFields = {
   title: "Cost Control on Alberta Pipeline Projects",
@@ -72,5 +73,12 @@ assert.equal(linkCheck.result, "warn");
 assert.match(linkCheck.message, /\/knowledge-hub\/thing/);
 // Without the site's page list, links are not judged.
 assert.equal(guidelineChecks({ ...good, body_markdown: "[old](/nope)" }).find((c) => c.rule_key === "links_work")!.result, "pass");
+
+// Page numbers: first, last, current and neighbours; any page is one click away.
+assert.deepEqual(pageList(1, 1), [1]);
+assert.deepEqual(pageList(1, 6), [1, 2, "gap", 5, 6]);
+assert.deepEqual(pageList(6, 12), [1, 2, "gap", 5, 6, 7, "gap", 11, 12]);
+assert.deepEqual(pageList(4, 6), [1, 2, 3, 4, 5, 6]);
+assert.deepEqual(pageList(12, 12), [1, 2, "gap", 11, 12]);
 
 console.log("schema and rules tests passed");

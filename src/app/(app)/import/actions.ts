@@ -6,7 +6,7 @@ import { requireActiveUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DRIVE_ID, driveErrorMessage, exportDocMarkdown, getFolderDoc } from "@/lib/drive";
 import { cleanDocMarkdown, titleFromDocName } from "@/lib/content/convert";
-import { guidelineChecks, slugify, type ArticleFields } from "@/lib/content/rules";
+import { DEFAULT_AUTHOR, guidelineChecks, slugify, type ArticleFields } from "@/lib/content/rules";
 import { loadSiteContext } from "@/lib/content/site-context";
 
 export type ImportState = { message?: string };
@@ -16,7 +16,7 @@ export type ImportState = { message?: string };
  * person who clicked. The Doc is only read, never changed.
  */
 export async function importDoc(_prev: ImportState, fd: FormData): Promise<ImportState> {
-  const user = await requireActiveUser();
+  await requireActiveUser();
   const fileId = String(fd.get("fileId") ?? "");
   if (!DRIVE_ID.test(fileId)) return { message: "That Doc couldn't be found." };
 
@@ -54,7 +54,7 @@ export async function importDoc(_prev: ImportState, fd: FormData): Promise<Impor
     content_type_id: null,
     service_area_id: null,
     target_keyword: null,
-    author_name: user.fullName || null,
+    author_name: DEFAULT_AUTHOR,
     publish_date: null,
     body_markdown: converted.markdown,
     tags: [],

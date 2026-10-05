@@ -6,7 +6,7 @@ import { FormMessage } from "@/components/form-fields";
 import { requireActiveUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, requestNow, timeAgo, FORMER_MEMBER } from "@/lib/content/status";
-import { LIMITS, REGIONS, REGION_SLUGS, regionBySlug, trendsUrl, type RegionSlug } from "@/lib/ideas/regions";
+import { LIMITS, REGIONS, REGION_SLUGS, countryLabel, regionBySlug, trendsUrl, type RegionSlug } from "@/lib/ideas/regions";
 import { isSearchConfigured } from "@/lib/ideas/search";
 import { isAiConfigured, summarySchema } from "@/lib/ideas/summarize";
 import { ResultView } from "./result-view";
@@ -42,7 +42,7 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
 
   const supabase = await createClient();
   const [keywordsRes, usageRes, recentRes, selectedRes] = await Promise.all([
-    supabase.from("keywords").select("phrase").order("phrase"),
+    supabase.from("keywords").select("phrase").eq("status", "active").order("phrase"),
     supabase.rpc("idea_search_usage").single(),
     supabase.from("idea_searches").select(COLUMNS).order("created_at", { ascending: false }).limit(12),
     searchId ? supabase.from("idea_searches").select(COLUMNS).eq("id", searchId).maybeSingle() : Promise.resolve({ data: null, error: null }),
@@ -99,8 +99,9 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
         <ResultView
           keyword={selected.keyword}
           regionLabel={region.label}
-          trendsHref={trendsUrl(selected.keyword)}
+          trendsHref={trendsUrl(selected.keyword, region.country)}
           byline={`Researched by ${who(selected)} · ${formatDateTime(selected.created_at)}${first(sp.reused) ? " · reused, no new search was needed" : ""}`}
+          trendsCountry={countryLabel(region.country)}
           aiStatus={selected.ai_status}
           summary={summary?.success ? summary.data : null}
           results={results?.success ? results.data : null}

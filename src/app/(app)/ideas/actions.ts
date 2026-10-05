@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireActiveUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { LIMITS, REGION_SLUGS, regionBySlug } from "@/lib/ideas/regions";
+import { LIMITS, REGION_SLUGS, countryLabel, regionBySlug } from "@/lib/ideas/regions";
 import { searchErrorMessage, webSearch, type SearchResult } from "@/lib/ideas/search";
 import { summarize } from "@/lib/ideas/summarize";
 
@@ -78,13 +78,13 @@ export async function researchKeyword(_prev: IdeaState, fd: FormData): Promise<I
       return { message: "The team has used this month's web searches. Research opens again on the 1st." };
     }
     try {
-      results = await webSearch(`${keyword} ${regionInfo.search}`);
+      results = await webSearch(`${keyword} ${regionInfo.search}`, regionInfo.country);
     } catch (e) {
       return { message: searchErrorMessage(e) };
     }
   }
 
-  const ai = results.length > 0 ? await summarize(keyword, regionInfo.label, results) : ({ status: "failed", summary: null } as const);
+  const ai = results.length > 0 ? await summarize(keyword, `${regionInfo.label}, ${countryLabel(regionInfo.country)}`, results) : ({ status: "failed", summary: null } as const);
 
   const { data: created, error } = await supabase
     .from("idea_searches")

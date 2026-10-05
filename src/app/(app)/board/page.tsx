@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { FormMessage } from "@/components/form-fields";
 import { StatusBadge, CountChip } from "@/components/status-badge";
 import { requireActiveUser } from "@/lib/auth";
@@ -198,27 +199,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
         </ul>
       )}
 
-      {board.total > PAGE_SIZE ? (
-        <nav aria-label="Pages" className="mt-4 flex items-center justify-between text-sm">
-          {params.page > 1 ? (
-            <Link href={boardHref(params, { page: params.page - 1 })} className="rounded-md border border-border bg-surface px-3 py-1.5 font-medium hover:bg-border/40">
-              Previous
-            </Link>
-          ) : (
-            <span className="rounded-md border border-border px-3 py-1.5 text-muted opacity-50" aria-disabled="true">Previous</span>
-          )}
-          <span className="text-muted">
-            Page {params.page} of {lastPage}
-          </span>
-          {params.page < lastPage ? (
-            <Link href={boardHref(params, { page: params.page + 1 })} className="rounded-md border border-border bg-surface px-3 py-1.5 font-medium hover:bg-border/40">
-              Next
-            </Link>
-          ) : (
-            <span className="rounded-md border border-border px-3 py-1.5 text-muted opacity-50" aria-disabled="true">Next</span>
-          )}
-        </nav>
-      ) : null}
+      <Pagination current={params.page} last={lastPage} hrefFor={(page) => boardHref(params, { page })} />
     </>
   );
 }

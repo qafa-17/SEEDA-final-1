@@ -33,7 +33,7 @@ export default function Home() {
 
       <main className="flex-1">
         <section className="mx-auto max-w-6xl px-4 py-16 md:py-24">
-          <p className="text-sm font-semibold uppercase tracking-wide text-accent">For {brand.client}&apos;s Knowledge Hub</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-accent">For content teams</p>
           <h1 className="mt-3 max-w-3xl font-display text-4xl font-bold leading-tight md:text-5xl">
             Publish a finished article without calling a developer.
           </h1>
@@ -69,7 +69,7 @@ export default function Home() {
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-muted">
-          {brand.name} · Built for {brand.client} · ENTR 3360
+          {brand.name} · ENTR 3360
         </div>
       </footer>
     </>

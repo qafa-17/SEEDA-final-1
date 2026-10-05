@@ -6,12 +6,13 @@ import { FormMessage } from "@/components/form-fields";
 import { StatusBadge, CountChip } from "@/components/status-badge";
 import { requireActiveUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import type { ArticleStatus } from "@/lib/content/status";
+import { FORMER_MEMBER, type ArticleStatus } from "@/lib/content/status";
+import { AddKeywordForm, ReviewButtons } from "./keyword-forms";
 
 export const metadata: Metadata = { title: "Keywords" };
 
 type Category = { id: number; name: string };
-type Keyword = { id: number; category_id: number; phrase: string };
+type Keyword = { id: number; category_id: number; phrase: string; status: "active" | "suggested"; added_by: string | null; suggester: { full_name: string } | null };
 type Usage = { keyword_id: number; article_count: number; published_count: number };
 type KeywordArticle = { id: string; title: string | null; status: ArticleStatus; is_main: boolean };
 
@@ -22,7 +23,8 @@ const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v
  * A keyword nobody has written about yet is the next article idea.
  */
 export default async function KeywordsPage({ searchParams }: PageProps<"/keywords">) {
-  await requireActiveUser();
+  const user = await requireActiveUser();
+  const isApprover = user.role === "approver";
   const sp = await searchParams;
   const show = z.enum(["all", "unused", "used"]).catch("all").parse(first(sp.show) ?? "all");
   const selectedId = z.coerce.number().int().positive().optional().catch(undefined).parse(first(sp.keyword) || undefined);
@@ -30,14 +32,17 @@ export default async function KeywordsPage({ searchParams }: PageProps<"/keyword
   const supabase = await createClient();
   const [categoriesRes, keywordsRes, usageRes, articlesRes] = await Promise.all([
     supabase.from("keyword_categories").select("id, name").order("sort_order"),
-    supabase.from("keywords").select("id, category_id, phrase").order("phrase"),
+    supabase.from("keywords").select("id, category_id, phrase, status, added_by, suggester:profiles(full_name)").order("phrase"),
     supabase.rpc("keyword_usage"),
     selectedId ? supabase.rpc("articles_for_keyword", { p_keyword_id: selectedId }) : Promise.resolve({ data: [], error: null }),
   ]);
 
   const failed = Boolean(categoriesRes.error || keywordsRes.error || usageRes.error);
   const categories = (categoriesRes.data ?? []) as Category[];
-  const keywords = (keywordsRes.data ?? []) as Keyword[];
+  const everyKeyword = (keywordsRes.data ?? []) as unknown as Keyword[];
+  // Only accepted keywords count toward coverage; suggestions wait in their own list.
+  const keywords = everyKeyword.filter((k) => k.status === "active");
+  const suggestions = everyKeyword.filter((k) => k.status === "suggested");
   const usage = new Map(((usageRes.data ?? []) as Usage[]).map((u) => [u.keyword_id, u]));
   const count = (k: Keyword) => Number(usage.get(k.id)?.article_count ?? 0);
   const published = (k: Keyword) => Number(usage.get(k.id)?.published_count ?? 0);
@@ -66,11 +71,11 @@ export default async function KeywordsPage({ searchParams }: PageProps<"/keyword
 
   return (
     <>
-      <PageHeader title="Keywords" description="The search phrases EPCMst wants to be found for, and which ones the hub's articles already target." />
+      <PageHeader title="Keywords" description="The search phrases the team wants to be found for, and which ones the hub's articles already target." />
 
       {failed ? (
         <FormMessage message="Couldn't load the keyword library. Refresh the page to try again." />
-      ) : keywords.length === 0 ? (
+      ) : everyKeyword.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="font-medium">No keywords yet</p>
           <p className="mt-1 text-sm text-muted">The keyword library is empty. An admin needs to load it.</p>
@@ -115,6 +120,31 @@ export default async function KeywordsPage({ searchParams }: PageProps<"/keyword
                   ))}
                 </ul>
               )}
+            </section>
+          ) : null}
+
+          <div className="mt-6">
+            <AddKeywordForm categories={categories} isApprover={isApprover} />
+          </div>
+
+          {suggestions.length > 0 ? (
+            <section aria-labelledby="suggestions" className="mt-6 rounded-lg border border-warning/40 bg-surface">
+              <h2 id="suggestions" className="border-b border-border p-4 font-semibold">
+                Suggested keywords <span className="font-normal text-muted">({suggestions.length} waiting for an approver)</span>
+              </h2>
+              <ul className="divide-y divide-border">
+                {suggestions.map((k) => (
+                  <li key={k.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm">
+                    <span className="min-w-0">
+                      <span className="font-medium">{k.phrase}</span>
+                      <span className="block text-xs text-muted">
+                        {categories.find((c) => c.id === k.category_id)?.name ?? "No group"} · suggested by {k.added_by ? k.suggester?.full_name || "Unnamed member" : FORMER_MEMBER}
+                      </span>
+                    </span>
+                    {isApprover ? <ReviewButtons id={k.id} phrase={k.phrase} decisions={["accept", "dismiss"]} /> : null}
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
 
@@ -170,6 +200,7 @@ export default async function KeywordsPage({ searchParams }: PageProps<"/keyword
                           <Link href={`/ideas?${new URLSearchParams({ keyword: k.phrase })}`} className="text-xs font-medium text-primary underline underline-offset-2" aria-label={`Research ${k.phrase}`}>
                             Research
                           </Link>
+                          {isApprover && count(k) === 0 ? <ReviewButtons id={k.id} phrase={k.phrase} decisions={["remove"]} /> : null}
                           </span>
                         </li>
                       ))}
@@ -180,7 +211,7 @@ export default async function KeywordsPage({ searchParams }: PageProps<"/keyword
             })}
           </div>
           <p className="mt-4 text-xs text-muted">
-            A keyword counts as targeted when an article uses it as its main keyword or one of its two extra keywords.
+            A keyword counts as targeted when an article uses it as its main keyword or one of its two extra keywords. Approvers can remove a keyword only while no article targets it.
           </p>
         </>
       )}

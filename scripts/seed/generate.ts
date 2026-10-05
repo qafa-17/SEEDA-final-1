@@ -255,7 +255,8 @@ for (let i = 0; i < ARTICLE_COUNT; i++) {
   for (let tries = 0; (meta.length > LIMITS.metaMax || meta.length < LIMITS.metaMin) && tries < 20; tries++) meta = metaFor(t, sector, pick(["Alberta", "BC"]), withKw);
   if (meta.length > LIMITS.metaMax || meta.length < LIMITS.metaMin) meta = `${t.keyword}: practical lessons for ${sector} owners, from EPCM teams working across Western Canada.`.slice(0, LIMITS.metaMax);
   let keyword: string | null = t.keyword;
-  let author: string | null = chance(0.6) ? owner.name : "EPCMst Team";
+  chance(0.6); // (kept so the rest of the random sequence is unchanged)
+  const author: string | null = "EPCMst Team";
   let publishDate: string | null = isoDate(created + between(14, 60) * DAY);
   let typeSlug: string | null = type, areaSlug: string | null = t.area;
   let words = between(350, 850);
@@ -282,7 +283,7 @@ for (let i = 0; i < ARTICLE_COUNT; i++) {
       if (which === 5 && title && !title.includes("Field Guide")) title = `${title}: A Field Guide for Owners and Site Teams`; // likely too long
       if (which === 6) publishDate = null;
       if (which === 7) { typeSlug = null; areaSlug = null; }
-      if (which === 8) author = null;
+      // which === 8 used to blank the author; every article now carries the team byline.
       if (which === 9) tags = [];
     }
     if (chance(0.08)) { text = ""; words = 0; } // imported, body not converted yet

@@ -20,6 +20,9 @@ export const LIMITS = {
   recommendedWords: 600,
 } as const;
 
+/** Every article is credited to the team, not a person (the owner's rule). */
+export const DEFAULT_AUTHOR = "EPCMst Team";
+
 /** Where articles live on the site: epcmst.com/resources/<slug>. */
 export const SITE_PREFIX = "/resources/";
 export const SITE_HOSTS = ["epcmst.com", "www.epcmst.com"];

@@ -78,7 +78,7 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
     supabase.from("publish_jobs").select("id, state, pr_url, live_url, http_status, in_sitemap, error_message, created_at").eq("article_id", id).order("created_at", { ascending: false }),
     supabase.from("content_types").select("id, label").order("sort_order"),
     supabase.from("service_areas").select("id, label").order("sort_order"),
-    supabase.from("keywords").select("phrase").order("phrase"),
+    supabase.from("keywords").select("phrase").eq("status", "active").order("phrase"),
     loadSiteContext(supabase, id),
   ]);
 
@@ -219,7 +219,6 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
             updatedAt={a.updated_at}
             types={(typesRes.data ?? []) as { id: number; label: string }[]}
             areas={(areasRes.data ?? []) as { id: number; label: string }[]}
-            ownerName={ownerName}
             afterForm={articleText}
             canRefresh={!isSample}
             site={site}

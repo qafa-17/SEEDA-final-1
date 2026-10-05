@@ -87,6 +87,9 @@ ok(!a.summarySchema.safeParse({ ...goodSummary, intent_summary: "x".repeat(5000)
 
 // ---- regions ----
 const t = new URL(r.trendsUrl("EPC consulting & advisory"));
+ok(new URL(r.trendsUrl("EPC services", "united states")).searchParams.get("geo") === "US", "Trends link: U.S. areas open the United States");
+await s.webSearch("EPC services Permian Basin", "united states");
+ok(calls[calls.length - 1].body.country === "united states", "U.S. areas search U.S. results");
 ok(t.hostname === "trends.google.com" && t.searchParams.get("geo") === "CA" && t.searchParams.get("date") === "today 5-y" && t.searchParams.get("q") === "EPC consulting & advisory", "Trends link: Canada, five years, keyword safely encoded");
 
 console.log(fail ? `${fail} FAILED` : "ALL IDEAS TESTS PASSED");

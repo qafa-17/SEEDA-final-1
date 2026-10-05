@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
 import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { FormMessage } from "@/components/form-fields";
 import { requireActiveUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -109,13 +110,7 @@ export default async function TeamPage({ searchParams }: PageProps<"/team">) {
           )}
         </div>
 
-        {pages > 1 ? (
-          <nav aria-label="Pages" className="mt-4 flex items-center justify-between text-sm">
-            {page > 1 ? <Link href={href({ page: page - 1 })} className="rounded-md border border-border bg-surface px-3 py-1.5 font-medium hover:bg-border/40">Previous</Link> : <span className="rounded-md border border-border px-3 py-1.5 text-muted opacity-50">Previous</span>}
-            <span className="text-muted">Page {page} of {pages}</span>
-            {page < pages ? <Link href={href({ page: page + 1 })} className="rounded-md border border-border bg-surface px-3 py-1.5 font-medium hover:bg-border/40">Next</Link> : <span className="rounded-md border border-border px-3 py-1.5 text-muted opacity-50">Next</span>}
-          </nav>
-        ) : null}
+        <Pagination current={page} last={pages} hrefFor={(n) => href({ page: n })} />
       </>
     );
   }

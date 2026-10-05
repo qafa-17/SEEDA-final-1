@@ -4,7 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { FormMessage } from "@/components/form-fields";
 import {
-  LIMITS, SITE_PREFIX, SLUG_PATTERN, TAG_PATTERN, blockingIssues, guidelineChecks, parseTags, slugify, wordCount,
+  DEFAULT_AUTHOR, LIMITS, SITE_PREFIX, SLUG_PATTERN, TAG_PATTERN, blockingIssues, guidelineChecks, parseTags, slugify, wordCount,
   type ArticleFields, type FieldName, type SiteContext,
 } from "@/lib/content/rules";
 import { changeStatus, deleteDraft, refreshFromDoc, saveArticle, type ActionState } from "./actions";
@@ -20,7 +20,6 @@ type Values = {
   secondary_keyword_1: string;
   secondary_keyword_2: string;
   tags: string;
-  author_name: string;
   publish_date: string;
 };
 
@@ -34,7 +33,6 @@ const toValues = (a: ArticleFields): Values => ({
   secondary_keyword_1: a.secondary_keywords[0] ?? "",
   secondary_keyword_2: a.secondary_keywords[1] ?? "",
   tags: a.tags.join(", "),
-  author_name: a.author_name ?? "",
   publish_date: a.publish_date ?? "",
 });
 
@@ -45,7 +43,7 @@ const toFields = (v: Values, body: string): ArticleFields => ({
   content_type_id: v.content_type_id ? Number(v.content_type_id) : null,
   service_area_id: v.service_area_id ? Number(v.service_area_id) : null,
   target_keyword: v.target_keyword.trim() === "" ? null : v.target_keyword.trim(),
-  author_name: v.author_name.trim() === "" ? null : v.author_name.trim(),
+  author_name: DEFAULT_AUTHOR,
   publish_date: v.publish_date === "" ? null : v.publish_date,
   body_markdown: body,
   tags: parseTags(v.tags),
@@ -95,7 +93,6 @@ export function ArticleEditor({
   updatedAt,
   types,
   areas,
-  ownerName,
   afterForm,
   canRefresh,
   site,
@@ -106,7 +103,6 @@ export function ArticleEditor({
   updatedAt: string;
   types: Option[];
   areas: Option[];
-  ownerName: string;
   afterForm: React.ReactNode; // the article text, shown under the form
   canRefresh: boolean; // has a real Google Doc behind it
   site: SiteContext; // the live site's pages, for URL and link checks
@@ -273,9 +269,9 @@ export function ArticleEditor({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="author_name" className="text-sm font-medium">Author</label>
-                <input id="author_name" name="author_name" value={values.author_name} onChange={set("author_name")} maxLength={100} placeholder={ownerName} className={`${inputClass} ${border(Boolean(err("author_name") ?? issue("author_name")))}`} />
-                {note("author_name")}
+                <p className="text-sm font-medium">Author</p>
+                <p className="mt-1 rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-muted">{DEFAULT_AUTHOR}</p>
+                <p className="mt-1 text-xs text-muted">Every article is credited to the team.</p>
               </div>
               <div>
                 <label htmlFor="publish_date" className="text-sm font-medium">Publish date</label>
