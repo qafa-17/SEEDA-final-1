@@ -64,7 +64,7 @@ export async function signUp(_prev: FormState, formData: FormData): Promise<Form
     options: {
       // Only full_name is sent. Role is never taken from the browser.
       data: { full_name: parsed.data.fullName },
-      emailRedirectTo: `${await siteOrigin()}/auth/confirm?next=/board`,
+      emailRedirectTo: `${await siteOrigin()}/auth/confirm?next=/dashboard`,
     },
   });
   if (error) return { message: friendlyAuthError(error.code), values };
@@ -139,7 +139,7 @@ export async function updatePassword(_prev: FormState, formData: FormData): Prom
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { message: friendlyAuthError(error.code) };
 
-  redirect("/board?passwordUpdated=1");
+  redirect("/dashboard?passwordUpdated=1");
 }
 
 export async function updateProfile(_prev: FormState, formData: FormData): Promise<FormState> {

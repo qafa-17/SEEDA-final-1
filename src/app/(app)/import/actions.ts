@@ -84,7 +84,7 @@ export async function importDoc(_prev: ImportState, fd: FormData): Promise<Impor
     { onConflict: "article_id,rule_key" },
   );
 
-  revalidatePath("/board");
+  revalidatePath("/dashboard");
   revalidatePath("/import");
   const notes = new URLSearchParams({ imported: "1" });
   if (converted.imagesRemoved) notes.set("images", String(converted.imagesRemoved));

@@ -10,7 +10,7 @@ import { siteContextFor } from "@/lib/content/site-context";
 import { STATUSES, statusMeta, timeAgo, requestNow, FORMER_MEMBER } from "@/lib/content/status";
 import { loadBoard, parseBoardParams, PAGE_SIZE, type BoardParams } from "@/lib/content/board-query";
 
-export const metadata: Metadata = { title: "Board" };
+export const metadata: Metadata = { title: "Dashboard" };
 
 /** Build a board link that keeps the current filters but changes some of them. */
 function boardHref(p: BoardParams, change: Partial<Record<keyof BoardParams, string | number | undefined>>) {
@@ -21,12 +21,12 @@ function boardHref(p: BoardParams, change: Partial<Record<keyof BoardParams, str
     sp.set(k, String(v));
   }
   const s = sp.toString();
-  return s ? `/board?${s}` : "/board";
+  return s ? `/dashboard?${s}` : "/dashboard";
 }
 
 const selectClass = "rounded-md border border-border bg-background px-3 py-2 text-sm";
 
-export default async function BoardPage({ searchParams }: PageProps<"/board">) {
+export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   const user = await requireActiveUser();
   const sp = await searchParams;
   const params = parseBoardParams(sp);
@@ -57,7 +57,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
       ) : null}
 
       <PageHeader
-        title="Board"
+        title="Dashboard"
         description="Every Knowledge Hub article and exactly where it stands."
         action={
           <Link href="/import" className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90">
@@ -90,7 +90,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
       </nav>
 
       {/* Search and filters: a plain form, so it works even before scripts load. */}
-      <form method="get" action="/board" className="mt-6 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
+      <form method="get" action="/dashboard" className="mt-6 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
         {params.status !== "all" ? <input type="hidden" name="status" value={params.status} /> : null}
         <div className="min-w-48 flex-1">
           <label htmlFor="q" className="block text-xs font-medium text-muted">
@@ -155,7 +155,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
           <p className="font-medium">{filtersActive || params.status !== "all" ? "Nothing matches these filters" : "No articles yet"}</p>
           <p className="mt-1 text-sm text-muted">
             {filtersActive || params.status !== "all" ? (
-              <Link href="/board" className="font-medium text-primary underline underline-offset-2">Show all articles</Link>
+              <Link href="/dashboard" className="font-medium text-primary underline underline-offset-2">Show all articles</Link>
             ) : (
               "Import a finished Google Doc to get started."
             )}

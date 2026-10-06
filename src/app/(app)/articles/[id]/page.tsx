@@ -155,8 +155,8 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
 
   return (
     <>
-      <Link href="/board" className="text-sm font-medium text-primary underline underline-offset-2">
-        Back to the board
+      <Link href="/dashboard" className="text-sm font-medium text-primary underline underline-offset-2">
+        Back to the dashboard
       </Link>
 
       <header className="mt-3 flex flex-wrap items-start justify-between gap-4">

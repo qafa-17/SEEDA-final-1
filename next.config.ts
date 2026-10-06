@@ -17,6 +17,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The Dashboard used to live at /board; old links and bookmarks still work.
+  async redirects() {
+    return [{ source: "/board", destination: "/dashboard", permanent: true }];
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

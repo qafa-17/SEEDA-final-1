@@ -11,7 +11,7 @@ function DeleteButton({ ready }: { ready: boolean }) {
     <button
       type="submit"
       disabled={!ready || pending}
-      className="rounded-md bg-danger px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      className="rounded-md bg-danger px-4 py-2 text-sm font-medium text-danger-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {pending ? "Deleting…" : "Delete my account"}
     </button>
@@ -24,7 +24,7 @@ export function DeleteAccountForm() {
   return (
     <form action={action} className="space-y-3">
       <p className="text-sm text-muted">
-        This permanently removes your sign-in, name and role. Articles you own stay on the board, shown as owned by a former
+        This permanently removes your sign-in, name and role. Articles you own stay on the dashboard, shown as owned by a former
         member. You can sign up again later with the same email; you&apos;ll start in the waiting room.
       </p>
       <FormMessage message={state.message} />

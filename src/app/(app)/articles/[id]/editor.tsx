@@ -76,7 +76,7 @@ function SaveButton({ dirty }: { dirty: boolean }) {
 
 function PendingButton({ label, pendingLabel, disabled, tone = "accent" }: { label: string; pendingLabel: string; disabled?: boolean; tone?: "accent" | "danger" }) {
   const { pending } = useFormStatus();
-  const tones = { accent: "bg-accent text-accent-foreground", danger: "bg-danger text-white" };
+  const tones = { accent: "bg-accent text-accent-foreground", danger: "bg-danger text-danger-foreground" };
   return (
     <button
       type="submit"

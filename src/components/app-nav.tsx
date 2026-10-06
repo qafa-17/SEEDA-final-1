@@ -9,17 +9,19 @@ import type { NavItem } from "@/config/brand";
 export function AppNav({ items, badges = {} }: { items: NavItem[]; badges?: Record<string, number> }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Main" className="flex gap-1 overflow-x-auto md:flex-col">
-      {items.map((item) => {
+    // A thin translucent line separates the links: between rows on a wide
+    // screen, between columns when the menu runs across a phone.
+    <nav aria-label="Main" className="flex overflow-x-auto md:flex-col">
+      {items.map((item, i) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const count = badges[item.href] ?? 0;
         return (
+          <div key={item.href} className={i > 0 ? "border-l border-border pl-1 ml-1 md:ml-0 md:border-l-0 md:border-t md:pl-0 md:pt-1 md:mt-1" : ""}>
           <Link
-            key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={`flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-              active ? "bg-primary text-primary-foreground" : "text-muted hover:bg-border/60 hover:text-foreground"
+              active ? "bg-primary text-primary-foreground" : "text-muted hover:bg-border hover:text-foreground"
             }`}
           >
             {item.label}
@@ -32,6 +34,7 @@ export function AppNav({ items, badges = {} }: { items: NavItem[]; badges?: Reco
               </span>
             ) : null}
           </Link>
+          </div>
         );
       })}
     </nav>

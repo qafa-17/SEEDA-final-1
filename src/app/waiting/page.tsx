@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Waiting for approval" };
 // Where signed-in people land until an approver lets them in.
 export default async function WaitingPage() {
   const user = await requireUser();
-  if (user.access === "active") redirect("/board");
+  if (user.access === "active") redirect("/dashboard");
   const disabled = user.access === "disabled";
 
   return (

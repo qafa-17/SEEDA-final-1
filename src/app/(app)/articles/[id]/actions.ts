@@ -93,7 +93,7 @@ export async function saveArticle(_prev: ActionState, fd: FormData): Promise<Act
   const saved = data[0] as ArticleFields & { id: string; updated_at: string };
   await refreshChecks(supabase, saved);
   revalidatePath(`/articles/${id}`);
-  revalidatePath("/board");
+  revalidatePath("/dashboard");
   return { ok: true, savedAt: saved.updated_at };
 }
 
@@ -117,7 +117,7 @@ export async function changeStatus(_prev: ActionState, fd: FormData): Promise<Ac
   }
 
   revalidatePath(`/articles/${parsed.data.id}`);
-  revalidatePath("/board");
+  revalidatePath("/dashboard");
   revalidatePath("/team");
   return { ok: true };
 }
@@ -134,8 +134,8 @@ export async function deleteDraft(_prev: ActionState, fd: FormData): Promise<Act
   if (error) return { message: "Couldn't delete this draft. Please try again." };
   if (!data || data.length === 0) return { message: "Only the owner or an approver can delete a draft, and only while it's a draft." };
 
-  revalidatePath("/board");
-  redirect("/board?deleted=1");
+  revalidatePath("/dashboard");
+  redirect("/dashboard?deleted=1");
 }
 
 /**
@@ -177,7 +177,7 @@ export async function refreshFromDoc(_prev: ActionState, fd: FormData): Promise<
   const saved = data[0] as ArticleFields & { id: string; updated_at: string };
   await refreshChecks(supabase, saved);
   revalidatePath(`/articles/${id.data}`);
-  revalidatePath("/board");
+  revalidatePath("/dashboard");
   return {
     ok: true,
     savedAt: saved.updated_at,

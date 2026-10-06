@@ -40,10 +40,10 @@ export default function Home() {
           <p className="mt-5 max-w-2xl text-lg text-muted">{brand.tagline}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/board"
+              href="/dashboard"
               className="rounded-md bg-primary px-5 py-3 font-medium text-primary-foreground hover:opacity-90"
             >
-              Open the board
+              Open the dashboard
             </Link>
             <Link href="#how-it-works" className="rounded-md border border-border bg-surface px-5 py-3 font-medium hover:bg-border/40">
               How it works

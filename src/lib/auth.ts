@@ -56,9 +56,9 @@ export async function requireActiveUser(): Promise<CurrentUser> {
   return user;
 }
 
-/** Active approver only. Others are sent to the board. */
+/** Active approver only. Others are sent to the dashboard. */
 export async function requireApprover(): Promise<CurrentUser> {
   const user = await requireActiveUser();
-  if (user.role !== "approver") redirect("/board");
+  if (user.role !== "approver") redirect("/dashboard");
   return user;
 }

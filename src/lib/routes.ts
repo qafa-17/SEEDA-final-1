@@ -1,8 +1,8 @@
 // Which pages need a signed-in user, and which are only for signed-out visitors.
-export const protectedPrefixes = ["/board", "/articles", "/ideas", "/import", "/keywords", "/settings", "/team", "/waiting", "/reset-password"];
+export const protectedPrefixes = ["/dashboard", "/articles", "/ideas", "/import", "/keywords", "/settings", "/team", "/waiting", "/reset-password"];
 export const signedOutOnlyPrefixes = ["/login", "/signup", "/forgot-password"];
 
-export const HOME_AFTER_SIGN_IN = "/board";
+export const HOME_AFTER_SIGN_IN = "/dashboard";
 
 const matches = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 

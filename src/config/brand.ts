@@ -10,7 +10,7 @@ export const brand = {
 export type NavItem = { href: string; label: string; approverOnly?: boolean };
 
 export const appNav: NavItem[] = [
-  { href: "/board", label: "Board" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/import", label: "Import from Drive" },
   { href: "/keywords", label: "Keywords" },
   { href: "/ideas", label: "Ideas" },

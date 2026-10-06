@@ -2,28 +2,86 @@
 
 /*
   Design tokens: Content Operations identity.
-  Every text/background pair here meets WCAG AA contrast (4.5:1 or better).
+  Two themes share the same token names, so every component follows the
+  theme without knowing about it. Every text/background pair in both
+  themes meets WCAG AA contrast (4.5:1 or better).
 */
 :root {
-  --background: #f7f6fb;
-  --surface: #ffffff;
-  --foreground: #1b1537;
-  --muted: #5d5877;
-  --border: #e3e0ef;
+  color-scheme: light;
+  --background: #f4eee2; /* warm cream page */
+  --surface: #fdfaf3; /* cream white for cards, softer than pure white */
+  --foreground: #1f1936;
+  --muted: #5a536f;
+  --border: #e4dccb;
   --primary: #4f2fc9; /* violet, 8.1:1 with white */
   --primary-foreground: #ffffff;
-  --accent: #d6336c; /* raspberry, 4.6:1 with white */
+  --accent: #c62a61; /* raspberry, 5.3:1 with white */
   --accent-foreground: #ffffff;
 
-  /* Workflow status colours, used on the board and badges */
-  --status-draft: #5d5877;
-  --status-review: #8a5a00;
-  --status-approved: #0b69a3;
-  --status-published: #1d7a45;
+  /* Workflow status colours, used on the dashboard and badges */
+  --status-draft: #5a536f;
+  --status-review: #855600;
+  --status-approved: #0b659c;
+  --status-published: #1a7441;
 
-  --success: #1d7a45;
-  --warning: #8a5a00;
-  --danger: #c0262d;
+  --success: #1a7441;
+  --warning: #855600;
+  --danger: #b9242b;
+  --danger-foreground: #ffffff;
+
+  /* The sidebar is a block of colour in both themes. */
+  --sidebar: #2c1a78;
+  --sidebar-foreground: #ffffff;
+  --sidebar-muted: #d5cdf3;
+  --sidebar-line: rgb(255 255 255 / 0.16);
+  --sidebar-active: rgb(255 255 255 / 0.18);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #14111f;
+  --surface: #1e1a30;
+  --foreground: #ece8f8;
+  --muted: #aaa3c4;
+  --border: #353050;
+  --primary: #a48bff; /* lighter violet, 6.6:1 on the dark surface */
+  --primary-foreground: #150f2b;
+  --accent: #ff7aa5;
+  --accent-foreground: #2a0a17;
+
+  --status-draft: #aaa3c4;
+  --status-review: #e3ad42;
+  --status-approved: #66b9ee;
+  --status-published: #62d08f;
+
+  --success: #62d08f;
+  --warning: #e3ad42;
+  --danger: #ff8086;
+  --danger-foreground: #2b0a0c;
+
+  --sidebar: #1b1440;
+  --sidebar-foreground: #ffffff;
+  --sidebar-muted: #c3bbe6;
+  --sidebar-line: rgb(255 255 255 / 0.12);
+  --sidebar-active: rgb(255 255 255 / 0.16);
+}
+
+/*
+  Inside the sidebar the ordinary tokens are re-pointed at the sidebar's
+  own colours, so the logo, links, badge and Sign out button need no
+  special styling to sit on the coloured background.
+*/
+.app-sidebar {
+  background: linear-gradient(180deg, var(--sidebar), color-mix(in srgb, var(--sidebar) 82%, #000));
+  color: var(--sidebar-foreground);
+  --foreground: var(--sidebar-foreground);
+  --muted: var(--sidebar-muted);
+  --border: var(--sidebar-line);
+  --primary: var(--sidebar-active);
+  --primary-foreground: #ffffff;
+  --accent: #ff7aa5;
+  --accent-foreground: #2a0a17;
+  --status-approved: #9fd4f7;
 }
 
 @theme inline {
@@ -43,6 +101,7 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
   --font-sans: "DM Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Sora Variable", ui-sans-serif, system-ui, sans-serif;
 }
