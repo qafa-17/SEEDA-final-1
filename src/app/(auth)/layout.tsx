@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Logo } from "@/components/logo";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -7,6 +8,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Logo />
       </div>
       <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 shadow-sm">{children}</div>
+      <p className="mt-6 text-xs text-muted">
+        <Link href="/privacy" className="underline underline-offset-2">Privacy</Link>
+      </p>
     </main>
   );
 }
