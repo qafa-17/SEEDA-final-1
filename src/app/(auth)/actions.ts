@@ -87,17 +87,26 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
   redirect(safeNextPath(str(formData, "next")));
 }
 
-// "Continue with Google". Login only asks Google for name and email (the
-// default scopes); it does NOT grant access to anyone's Drive.
-export async function signInWithGoogle(formData: FormData) {
+// "Continue with Google" / "Continue with GitHub". Only the providers in
+// this list are accepted, whatever a form sends. Each asks for the person's
+// name and email only. The provider sends them back to /auth/confirm, which
+// swaps the one-time code for a session. It does NOT grant access to
+// anyone's Drive or code.
+const OAUTH_PROVIDERS = ["google", "github"] as const;
+type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
+
+export async function signInWithProvider(formData: FormData) {
+  const raw = str(formData, "provider");
+  const provider = (OAUTH_PROVIDERS as readonly string[]).includes(raw) ? (raw as OAuthProvider) : null;
+  if (!provider) redirect("/login?oauth=failed");
   const next = safeNextPath(str(formData, "next"));
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
+    provider,
     options: {
-      // Google sends people back here; /auth/confirm swaps the code for a session.
       redirectTo: `${await siteOrigin()}/auth/confirm?next=${encodeURIComponent(next)}`,
-      queryParams: { prompt: "select_account" },
+      // Google: always show the account picker, so a shared computer can't sign in as the wrong person.
+      queryParams: provider === "google" ? { prompt: "select_account" } : undefined,
     },
   });
   if (error || !data.url) redirect("/login?oauth=failed");

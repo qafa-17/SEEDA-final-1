@@ -38,3 +38,18 @@ fresh; run $T/supabase_stub.sql $M/0001_profiles_and_roles.sql; users
 fresh; run $T/supabase_stub.sql $M/0001_profiles_and_roles.sql; users
        run $M/0002_content_workflow.sql $M/0003_delete_own_account.sql $M/0004_article_teams.sql \
            $M/0005_scope_corrections.sql $M/0006_idea_searches.sql $M/0007_owner_feedback.sql $T/0007_owner_feedback.test.sql; echo "ok 0007"
+fresh; run $T/supabase_stub.sql $M/0001_profiles_and_roles.sql $M/0008_github_names.sql
+       $PSQL -q -v ON_ERROR_STOP=1 -d hubtest >/dev/null <<'SQL'
+insert into auth.users (id, email, raw_user_meta_data) values
+ ('bbbbbbbb-0000-0000-0000-000000000001','g@x.com','{"full_name":"  Google Person "}'),
+ ('bbbbbbbb-0000-0000-0000-000000000002','h@x.com','{"name":"GitHub Person","user_name":"ghp"}'),
+ ('bbbbbbbb-0000-0000-0000-000000000003','u@x.com','{"name":"","user_name":"handle-only"}'),
+ ('bbbbbbbb-0000-0000-0000-000000000004','e@x.com','{}');
+do $$ begin
+  assert (select full_name from public.profiles where id = 'bbbbbbbb-0000-0000-0000-000000000001') = 'Google Person', 'full_name kept';
+  assert (select full_name from public.profiles where id = 'bbbbbbbb-0000-0000-0000-000000000002') = 'GitHub Person', 'GitHub name';
+  assert (select full_name from public.profiles where id = 'bbbbbbbb-0000-0000-0000-000000000003') = 'handle-only', 'GitHub username fallback';
+  assert (select full_name from public.profiles where id = 'bbbbbbbb-0000-0000-0000-000000000004') = '', 'no name at all';
+end $$;
+SQL
+       echo "ok 0008"

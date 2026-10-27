@@ -5,7 +5,7 @@ import { brand } from "@/config/brand";
 
 export const metadata: Metadata = { title: "Privacy" };
 
-const UPDATED = "October 6, 2026";
+const UPDATED = "October 27, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -39,13 +39,14 @@ export default function PrivacyPage() {
 
         <Section title="What is stored about you">
           <ul className="list-disc space-y-1.5 pl-5">
-            <li><strong>Your name and email address</strong>, which you give when you create an account or which Google provides when you choose &quot;Continue with Google&quot;.</li>
+            <li><strong>Your name and email address</strong>, which you give when you create an account or which Google or GitHub provides when you choose &quot;Continue with Google&quot; or &quot;Continue with GitHub&quot;.</li>
             <li><strong>Your role and access</strong> in the workspace (publisher or approver; waiting, active or removed).</li>
             <li><strong>Your work</strong>: the articles you import or edit, the keywords you add or suggest, the research you run, and a history of who submitted, approved or changed each article.</li>
           </ul>
           <p>
-            If you sign in with Google, the workspace receives only your basic profile: name, email address and profile
-            picture address. It does not receive your Google password, contacts, Gmail or personal Drive files. The
+            If you sign in with Google or GitHub, the workspace receives only your basic profile: name, username, email
+            address and profile picture address. It does not receive your password, contacts, Gmail, personal Drive
+            files or code. The
             profile picture is not shown or used.
           </p>
           <p>If you sign up with a password, it is stored only in scrambled (hashed) form by the sign-in service. Nobody, including the people who run the workspace, can read it.</p>
@@ -71,6 +72,7 @@ export default function PrivacyPage() {
           <ul className="list-disc space-y-1.5 pl-5">
             <li><strong>Supabase</strong> stores the database and handles sign-in.</li>
             <li><strong>Vercel</strong> hosts the website.</li>
+            <li><strong>GitHub</strong> provides &quot;Continue with GitHub&quot;.</li>
             <li><strong>Google</strong> provides &quot;Continue with Google&quot;, delivers account emails, and holds the one shared Drive folder the workspace reads articles from.</li>
             <li><strong>Tavily</strong> (web search) and <strong>Google Gemini</strong> (AI summaries) receive the keyword and area you research, and the public search results for it. They are not sent your name, email address or any other personal information.</li>
           </ul>

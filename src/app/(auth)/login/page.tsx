@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FormMessage } from "@/components/form-fields";
 import { SignInForm } from "../forms";
-import { GoogleButton, OrDivider } from "../google-button";
+import { ProviderButtons, OrDivider } from "../provider-buttons";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -27,13 +27,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <FormMessage
             message={
               params.oauth === "cancelled"
-                ? "Google sign-in was cancelled. Try again, or use your email below."
-                : "Couldn't reach Google sign-in. Try again in a moment, or use your email below."
+                ? "Sign-in was cancelled. Try again, or use your email below."
+                : "Couldn't reach that sign-in service. Try again in a moment, or use your email below."
             }
           />
         </div>
       ) : null}
-      <GoogleButton next={next} />
+      <ProviderButtons next={next} />
       <OrDivider />
       <SignInForm next={next} />
       <p className="mt-4 text-center text-sm">
