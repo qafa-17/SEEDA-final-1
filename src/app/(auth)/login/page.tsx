@@ -11,7 +11,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const next = typeof params.next === "string" ? params.next : undefined;
   return (
     <>
-      <h1 className="font-display text-xl font-bold">Sign in</h1>
+      <h1 className="font-display text-3xl font-bold tracking-tight">Welcome back</h1>
+      <p className="mt-2 text-muted">Sign in to your workspace.</p>
       {params.accountDeleted ? (
         <div className="mt-4">
           <FormMessage tone="success" message="Your account has been deleted." />

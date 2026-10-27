@@ -150,3 +150,22 @@ body {
 .article-text th, .article-text td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
 .article-text th { background: var(--background); font-weight: 600; }
 .article-text input[type="checkbox"] { margin-right: 0.4rem; }
+
+/* Sign-in pages: each part of the form fades up in turn when the page opens.
+   Nothing moves for people who ask their device for reduced motion. */
+@keyframes auth-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.auth-stagger > * { animation: auth-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.auth-stagger > :nth-child(2) { animation-delay: 0.05s; }
+.auth-stagger > :nth-child(3) { animation-delay: 0.1s; }
+.auth-stagger > :nth-child(4) { animation-delay: 0.15s; }
+.auth-stagger > :nth-child(5) { animation-delay: 0.2s; }
+.auth-stagger > :nth-child(6) { animation-delay: 0.25s; }
+.auth-stagger > :nth-child(n + 7) { animation-delay: 0.3s; }
+@media (prefers-reduced-motion: reduce) {
+  .auth-stagger > * { animation: none; }
+}
+/* The sign-in forms sit straight on the page, so their boxes use the card colour to stand out. */
+.auth-stagger input { background-color: var(--surface); }

@@ -8,7 +8,7 @@ export default async function CheckEmailPage({ searchParams }: PageProps<"/check
   const isReset = reason === "reset";
   return (
     <>
-      <h1 className="font-display text-xl font-bold">Check your email</h1>
+      <h1 className="font-display text-3xl font-bold tracking-tight">Check your email</h1>
       <p className="mt-3 text-sm">
         {isReset
           ? "If an account exists for that address, we've sent a link to choose a new password."

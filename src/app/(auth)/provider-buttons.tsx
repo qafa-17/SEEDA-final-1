@@ -27,7 +27,7 @@ function ProviderMark({ provider }: { provider: Provider }) {
   );
 }
 
-function Button({ provider, verb }: { provider: Provider; verb: string }) {
+function Button({ provider, verb, srVerb }: { provider: Provider; verb: string; srVerb: string }) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -36,31 +36,37 @@ function Button({ provider, verb }: { provider: Provider; verb: string }) {
       className="flex w-full items-center justify-center gap-3 rounded-md border border-border bg-surface px-4 py-2 font-medium transition-colors hover:bg-border/40 disabled:cursor-wait disabled:opacity-60"
     >
       <ProviderMark provider={provider} />
-      {pending ? `Opening ${names[provider]}…` : `${verb} with ${names[provider]}`}
+      {pending ? `Opening ${names[provider]}…` : verb ? `${verb} with ${names[provider]}` : (
+        <>
+          {/* Short label on screen; the full action for screen readers. */}
+          <span className="sr-only">{srVerb} with </span>
+          {names[provider]}
+        </>
+      )}
     </button>
   );
 }
 
 /** "Continue with Google" and "Continue with GitHub", one small form each. */
-export function ProviderButtons({ next, verb = "Continue" }: { next?: string; verb?: string }) {
+export function ProviderButtons({ next, verb = "Continue", row = false }: { next?: string; verb?: string; row?: boolean }) {
   return (
-    <div className="mt-5 space-y-2.5">
+    <div className={row ? "mt-6 grid gap-2.5 sm:grid-cols-2" : "mt-6 space-y-2.5"}>
       {(["google", "github"] as const).map((provider) => (
         <form key={provider} action={signInWithProvider}>
           <input type="hidden" name="provider" value={provider} />
           <input type="hidden" name="next" value={next ?? ""} />
-          <Button provider={provider} verb={verb} />
+          <Button provider={provider} verb={row ? "" : verb} srVerb={verb} />
         </form>
       ))}
     </div>
   );
 }
 
-export function OrDivider() {
+export function OrDivider({ text = "or with email" }: { text?: string }) {
   return (
     <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wide text-muted" role="separator">
       <span className="h-px flex-1 bg-border" />
-      or with email
+      {text}
       <span className="h-px flex-1 bg-border" />
     </div>
   );

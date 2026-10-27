@@ -52,8 +52,8 @@ function friendlyAuthError(code: string | undefined): string {
 }
 
 export async function signUp(_prev: FormState, formData: FormData): Promise<FormState> {
-  const raw = { fullName: str(formData, "fullName"), email: str(formData, "email"), password: str(formData, "password") };
-  const values = { fullName: raw.fullName, email: raw.email };
+  const raw = { firstName: str(formData, "firstName"), lastName: str(formData, "lastName"), email: str(formData, "email"), password: str(formData, "password") };
+  const values = { firstName: raw.firstName, lastName: raw.lastName, email: raw.email };
   const parsed = signUpSchema.safeParse(raw);
   if (!parsed.success) return { fieldErrors: toFieldErrors(parsed.error), values };
 
@@ -63,7 +63,7 @@ export async function signUp(_prev: FormState, formData: FormData): Promise<Form
     password: parsed.data.password,
     options: {
       // Only full_name is sent. Role is never taken from the browser.
-      data: { full_name: parsed.data.fullName },
+      data: { full_name: [parsed.data.firstName, parsed.data.lastName].filter(Boolean).join(" ") },
       emailRedirectTo: `${await siteOrigin()}/auth/confirm?next=/dashboard`,
     },
   });

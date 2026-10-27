@@ -13,10 +13,18 @@ export function SignUpForm() {
   return (
     <form action={action} className="space-y-4" noValidate>
       <FormMessage message={state.message} />
-      <TextField name="fullName" label="Full name" autoComplete="name" maxLength={100} defaultValue={state.values?.fullName} error={state.fieldErrors?.fullName} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <TextField name="firstName" label="First name" autoComplete="given-name" maxLength={50} defaultValue={state.values?.firstName} error={state.fieldErrors?.firstName} />
+        <TextField name="lastName" label="Last name (optional)" autoComplete="family-name" maxLength={50} required={false} defaultValue={state.values?.lastName} error={state.fieldErrors?.lastName} />
+      </div>
       <TextField name="email" label="Work email" type="email" autoComplete="email" defaultValue={state.values?.email} error={state.fieldErrors?.email} />
       <TextField name="password" label="Password" type="password" autoComplete="new-password" hint={passwordHint} error={state.fieldErrors?.password} />
-      <SubmitButton pendingLabel="Creating account…">Create account</SubmitButton>
+      <SubmitButton pendingLabel="Creating account…">
+        <span className="inline-flex items-center gap-2">
+          Create account
+          <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </span>
+      </SubmitButton>
     </form>
   );
 }

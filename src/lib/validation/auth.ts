@@ -21,7 +21,9 @@ const newPassword = z
   .refine((p) => /[A-Za-z]/.test(p) && /\d/.test(p), "Include at least one letter and one number.");
 
 export const signUpSchema = z.object({
-  fullName: z.string().trim().min(1, "Enter your name.").max(100, "Keep your name under 100 characters."),
+  firstName: z.string().trim().min(1, "Enter your first name.").max(50, "Keep your first name under 50 characters."),
+  // Optional: some people have one name only.
+  lastName: z.string().trim().max(50, "Keep your last name under 50 characters."),
   email,
   password: newPassword,
 });
