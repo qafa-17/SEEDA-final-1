@@ -77,7 +77,7 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
       <SearchForm
         key={`${selected?.id ?? presetKeyword}`}
         keywords={((keywordsRes.data ?? []) as { phrase: string }[]).map((k) => k.phrase)}
-        regions={REGIONS.map((r) => ({ slug: r.slug, label: r.label }))}
+        regions={REGIONS.map((r) => ({ slug: r.slug, label: r.label, country: r.country }))}
         defaultKeyword={selected?.keyword ?? presetKeyword}
         defaultRegion={selected?.region ?? presetRegion}
         disabled={!isSearchConfigured()}

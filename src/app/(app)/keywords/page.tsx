@@ -8,6 +8,7 @@ import { requireActiveUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { FORMER_MEMBER, type ArticleStatus } from "@/lib/content/status";
 import { AddKeywordForm, ReviewButtons } from "./keyword-forms";
+import { FilterDisclosure } from "@/components/filter-disclosure";
 
 export const metadata: Metadata = { title: "Keywords" };
 
@@ -63,10 +64,10 @@ export default async function KeywordsPage({ searchParams }: PageProps<"/keyword
   };
 
   const tabs = [
-    { key: "all", label: "All", n: keywords.length },
+    { key: "all", label: "All keywords", n: keywords.length },
     { key: "unused", label: "No article yet", n: keywords.length - covered },
     { key: "used", label: "Has an article", n: covered },
-  ];
+  ] as const;
   const visible = (k: Keyword) => show === "all" || (show === "used" ? count(k) > 0 : count(k) === 0);
 
   return (
@@ -148,18 +149,14 @@ export default async function KeywordsPage({ searchParams }: PageProps<"/keyword
             </section>
           ) : null}
 
-          <nav aria-label="Filter keywords" className="mt-6 flex flex-wrap gap-2">
-            {tabs.map((t) => (
-              <Link
-                key={t.key}
-                href={href({ show: t.key })}
-                aria-current={show === t.key ? "page" : undefined}
-                className={`rounded-full border px-3 py-1 text-sm font-medium ${show === t.key ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface hover:bg-border/40"}`}
-              >
-                {t.label} <span className="opacity-80">({t.n})</span>
-              </Link>
-            ))}
-          </nav>
+          <div className="mt-6">
+            <FilterDisclosure
+              key={show}
+              label="Show"
+              value={show}
+              options={tabs.map((t) => ({ id: t.key, label: t.label, icon: t.key, detail: `(${t.n})`, href: href({ show: t.key }) }))}
+            />
+          </div>
 
           <div className="mt-4 space-y-6">
             {categories.map((c) => {

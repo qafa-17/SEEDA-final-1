@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { FormMessage } from "@/components/form-fields";
+import { FilterDisclosure } from "@/components/filter-disclosure";
 import { researchKeyword, type IdeaState } from "./actions";
 
 function Button({ disabled }: { disabled: boolean }) {
@@ -26,7 +27,7 @@ export function SearchForm({
   disabled,
 }: {
   keywords: string[];
-  regions: { slug: string; label: string }[];
+  regions: { slug: string; label: string; country: string }[];
   defaultKeyword: string;
   defaultRegion: string;
   disabled: boolean; // the search service isn't set up
@@ -35,7 +36,7 @@ export function SearchForm({
   const keywordError = state.fieldErrors?.keyword;
   return (
     <form action={action} className="rounded-lg border border-border bg-surface p-5" noValidate>
-      <div className="grid gap-4 sm:grid-cols-[1fr_14rem_auto] sm:items-end">
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
         <div>
           <label htmlFor="keyword" className="text-sm font-medium">Keyword</label>
           <input
@@ -55,10 +56,15 @@ export function SearchForm({
           </datalist>
         </div>
         <div>
-          <label htmlFor="region" className="text-sm font-medium">Area</label>
-          <select id="region" name="region" defaultValue={defaultRegion} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
-            {regions.map((r) => <option key={r.slug} value={r.slug}>{r.label}</option>)}
-          </select>
+          <span className="text-sm font-medium">Area</span>
+          <div className="mt-1">
+            <FilterDisclosure
+              label="Area"
+              name="region"
+              value={defaultRegion}
+              options={regions.map((r) => ({ id: r.slug, label: r.label, icon: r.country === "canada" ? "canada" : "usa" }))}
+            />
+          </div>
         </div>
         <Button disabled={disabled} />
       </div>
