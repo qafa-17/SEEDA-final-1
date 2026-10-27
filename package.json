@@ -9,7 +9,8 @@
     "lint": "eslint",
     "seed:generate": "tsx scripts/seed/generate.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/convert.test.ts && tsx tests/schema.test.ts && NODE_OPTIONS=--conditions=react-server tsx tests/drive.test.mts && NODE_OPTIONS=--conditions=react-server tsx tests/ideas.test.mts"
+    "test": "tsx tests/convert.test.ts && tsx tests/schema.test.ts && NODE_OPTIONS=--conditions=react-server tsx tests/drive.test.mts && NODE_OPTIONS=--conditions=react-server tsx tests/ideas.test.mts",
+    "map:build": "tsx scripts/map/build.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
@@ -28,13 +29,18 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/d3-geo": "^3.1.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/topojson-client": "^3.1.5",
+    "d3-geo": "^3.1.1",
     "eslint": "^9",
     "eslint-config-next": "16.3.7",
     "tailwindcss": "^4",
+    "topojson-client": "^3.1.0",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "world-atlas": "^2.0.2"
   }
 }

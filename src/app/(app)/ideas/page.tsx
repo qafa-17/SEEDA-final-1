@@ -11,6 +11,7 @@ import { isSearchConfigured } from "@/lib/ideas/search";
 import { isAiConfigured, summarySchema } from "@/lib/ideas/summarize";
 import { ResultView } from "./result-view";
 import { SearchForm } from "./search-form";
+import { IdeasMap, type MapArea } from "./ideas-map";
 
 export const metadata: Metadata = { title: "Ideas" };
 
@@ -39,12 +40,16 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
   const searchId = z.uuid().optional().catch(undefined).parse(first(sp.search) || undefined);
   const presetKeyword = (first(sp.keyword) ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
   const presetRegion = z.enum(REGION_SLUGS).catch("alberta").parse(first(sp.region) ?? "alberta");
+  // Recent research as a list (default) or on a map.
+  const view = z.enum(["list", "map"]).catch("list").parse(first(sp.view) ?? "list");
 
   const supabase = await createClient();
   const [keywordsRes, usageRes, recentRes, selectedRes] = await Promise.all([
     supabase.from("keywords").select("phrase").eq("status", "active").order("phrase"),
     supabase.rpc("idea_search_usage").single(),
-    supabase.from("idea_searches").select(COLUMNS).order("created_at", { ascending: false }).limit(12),
+    view === "map"
+      ? supabase.from("idea_searches").select("id, keyword, region, ai_status, created_at").order("created_at", { ascending: false }).limit(500)
+      : supabase.from("idea_searches").select(COLUMNS).order("created_at", { ascending: false }).limit(12),
     searchId ? supabase.from("idea_searches").select(COLUMNS).eq("id", searchId).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
 
@@ -52,6 +57,13 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
   const usedToday = Number(usage?.mine_today ?? 0);
   const usedMonth = Number(usage?.team_this_month ?? 0);
   const recent = (recentRes.data ?? []) as unknown as Row[];
+  const viewHref = (v: "list" | "map") => {
+    const q = new URLSearchParams();
+    if (searchId) q.set("search", searchId);
+    if (v === "map") q.set("view", "map");
+    const s = q.toString();
+    return s ? `/ideas?${s}` : "/ideas";
+  };
   const selected = selectedRes.data as unknown as Row | null;
   const now = requestNow();
 
@@ -109,31 +121,71 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
       ) : null}
 
       <section aria-labelledby="recent" className="mt-10">
-        <h2 id="recent" className="font-semibold">Recent research by the team</h2>
-        {recentRes.error ? (
-          <div className="mt-2"><FormMessage message="Couldn't load earlier research. Refresh the page to try again." /></div>
-        ) : recent.length === 0 ? (
-          <div className="mt-3 rounded-lg border border-dashed border-border bg-surface px-6 py-10 text-center">
-            <p className="font-medium">No research yet</p>
-            <p className="mt-1 text-sm text-muted">Research a keyword above and it will be saved here for the whole team.</p>
-          </div>
-        ) : (
-          <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
-            {recent.map((r) => (
-              <li key={r.id}>
-                <Link href={`/ideas?search=${r.id}`} aria-current={r.id === selected?.id ? "page" : undefined} className={`flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-background ${r.id === selected?.id ? "bg-background" : ""}`}>
-                  <span className="min-w-0">
-                    <span className="font-medium">{r.keyword}</span>
-                    <span className="text-muted"> · {regionBySlug(r.region)?.label ?? r.region}</span>
-                  </span>
-                  <span className="flex items-center gap-2 text-xs text-muted">
-                    {r.ai_status !== "ok" ? <span className="rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning">Results only</span> : null}
-                    {who(r)} · {timeAgo(r.created_at, now)}
-                  </span>
-                </Link>
-              </li>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="recent" className="font-semibold">Recent research by the team</h2>
+          {/* Two ways to see the same research: a list, or by area on a map. */}
+          <nav aria-label="How to show research" className="flex rounded-full border border-border bg-surface p-1 text-sm">
+            {(["list", "map"] as const).map((v) => (
+              <Link
+                key={v}
+                href={viewHref(v)}
+                scroll={false}
+                aria-current={view === v ? "page" : undefined}
+                className={`rounded-full px-4 py-1.5 font-medium transition-colors ${view === v ? "bg-primary text-primary-foreground" : "text-muted hover:text-foreground"}`}
+              >
+                {v === "list" ? "List" : "Map"}
+              </Link>
             ))}
-          </ul>
+          </nav>
+        </div>
+        {view === "map" ? (
+          recentRes.error ? (
+            <div className="mt-2"><FormMessage message="Couldn't load earlier research. Refresh the page to try again." /></div>
+          ) : (
+            <div className="mt-3">
+              <IdeasMap
+                initial={first(sp.region) ? presetRegion : selected?.region}
+                areas={REGIONS.map((r): MapArea => {
+                  const here = recent.filter((x) => x.region === r.slug);
+                  return {
+                    slug: r.slug,
+                    label: r.label,
+                    country: r.country,
+                    count: here.length,
+                    research: here.slice(0, 6).map((x) => ({ id: x.id, keyword: x.keyword, when: timeAgo(x.created_at, now), resultsOnly: x.ai_status !== "ok" })),
+                  };
+                })}
+              />
+            </div>
+          )
+        ) : (
+          <>
+        {recentRes.error ? (
+            <div className="mt-2"><FormMessage message="Couldn't load earlier research. Refresh the page to try again." /></div>
+          ) : recent.length === 0 ? (
+            <div className="mt-3 rounded-lg border border-dashed border-border bg-surface px-6 py-10 text-center">
+              <p className="font-medium">No research yet</p>
+              <p className="mt-1 text-sm text-muted">Research a keyword above and it will be saved here for the whole team.</p>
+            </div>
+          ) : (
+            <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+              {recent.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/ideas?search=${r.id}`} aria-current={r.id === selected?.id ? "page" : undefined} className={`flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-background ${r.id === selected?.id ? "bg-background" : ""}`}>
+                    <span className="min-w-0">
+                      <span className="font-medium">{r.keyword}</span>
+                      <span className="text-muted"> · {regionBySlug(r.region)?.label ?? r.region}</span>
+                    </span>
+                    <span className="flex items-center gap-2 text-xs text-muted">
+                      {r.ai_status !== "ok" ? <span className="rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning">Results only</span> : null}
+                      {who(r)} · {timeAgo(r.created_at, now)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          </>
         )}
       </section>
     </>

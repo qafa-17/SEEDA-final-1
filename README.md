@@ -34,6 +34,10 @@ SQL migrations live in `supabase/migrations/` and are run in order in the Supaba
 
 `npm run seed:generate` (or `ARTICLES=300 npm run seed:generate`) writes `supabase/seed/seed_part*.sql`: fictional articles in every status, with history, guideline checks and publish attempts, plus a small fictional team (`@example.com`, cannot sign in). Run the parts in order in the Supabase SQL Editor. `supabase/seed/remove_seed.sql` removes only the synthetic rows. The output is the same every run (fixed random seed).
 
+## Ideas map
+
+`npm run map:build` regenerates `src/lib/ideas/map-data.ts`: country outlines from world-atlas (Natural Earth, public domain), projected once into plain SVG shapes, plus the position of each research area. The app draws the map itself, so it needs no map service or key.
+
 ## Environment variables
 
 Copy `.env.example` to `.env.local`. In Vercel → Settings → Environment Variables:
