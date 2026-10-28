@@ -8,7 +8,7 @@
 */
 :root {
   color-scheme: light;
-  --background: #f4eee2; /* warm cream page */
+  --background: #ffffff; /* white page; cards stay cream white (--surface) */
   --surface: #fdfaf3; /* cream white for cards, softer than pure white */
   --foreground: #1f1936;
   --muted: #5a536f;
