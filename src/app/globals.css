@@ -111,6 +111,15 @@ body {
   color: var(--foreground);
 }
 
+/* Card edge for the Dashboard: a hairline ring, a soft drop and a light top
+   highlight in the light theme; just the ring in the dark theme. */
+.shadow-card {
+  box-shadow: 0 0 0 1px var(--border), 0 1px 2px rgb(31 25 54 / 0.05), 0 6px 16px -10px rgb(31 25 54 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.7);
+}
+:root[data-theme="dark"] .shadow-card {
+  box-shadow: 0 0 0 1px var(--border), inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
 /* Visible keyboard focus everywhere (accessibility). */
 :focus-visible {
   outline: 2px solid var(--accent);

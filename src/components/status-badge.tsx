@@ -16,5 +16,5 @@ export function CountChip({ tone, children }: { tone: "danger" | "warning" | "su
     warning: "bg-warning/10 text-warning",
     success: "bg-success/10 text-success",
   };
-  return <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${tones[tone]}`}>{children}</span>;
+  return <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${tones[tone]}`}>{children}</span>;
 }

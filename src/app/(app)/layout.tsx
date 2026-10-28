@@ -55,7 +55,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
       <main className="flex-1 p-4 md:p-8">
-        <div className="mx-auto max-w-5xl">{children}</div>
+        {/* Pages marked page-wide (the Dashboard) get more room for their charts and table. */}
+        <div className="mx-auto max-w-5xl has-[.page-wide]:max-w-7xl">{children}</div>
       </main>
     </div>
   );

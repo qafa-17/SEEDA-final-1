@@ -9,7 +9,7 @@
     "lint": "eslint",
     "seed:generate": "tsx scripts/seed/generate.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/convert.test.ts && tsx tests/schema.test.ts && NODE_OPTIONS=--conditions=react-server tsx tests/drive.test.mts && NODE_OPTIONS=--conditions=react-server tsx tests/ideas.test.mts",
+    "test": "tsx tests/convert.test.ts && tsx tests/schema.test.ts && tsx tests/overview.test.ts && NODE_OPTIONS=--conditions=react-server tsx tests/drive.test.mts && NODE_OPTIONS=--conditions=react-server tsx tests/ideas.test.mts",
     "map:build": "tsx scripts/map/build.ts"
   },
   "dependencies": {
@@ -23,6 +23,7 @@
     "react-dom": "19.2.8",
     "react-icons": "^5.7.0",
     "react-markdown": "^10.1.0",
+    "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
     "server-only": "^0.0.1",
     "zod": "^4.6.5"
