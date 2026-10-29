@@ -8,6 +8,8 @@ import { StatusBadge, CountChip } from "@/components/status-badge";
 import { FormMessage } from "@/components/form-fields";
 import { requireActiveUser } from "@/lib/auth";
 import { ArticleEditor } from "./editor";
+import { PublishPanel, type LatestJob } from "./publish-panel";
+import { isPublishConfigured, publishTarget } from "@/lib/publish/github";
 import { WorkflowActions } from "./workflow";
 import { createClient } from "@/lib/supabase/server";
 import { LIMITS, SITE_PREFIX, blockingProblems, type ArticleFields } from "@/lib/content/rules";
@@ -98,6 +100,12 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
   const ownerName = a.owner_id ? a.owner?.full_name || "Unnamed member" : FORMER_MEMBER;
   const isOwner = a.owner_id === user.id;
   const isApprover = user.role === "approver";
+  let publishSite = "";
+  try {
+    publishSite = publishTarget().site;
+  } catch {
+    publishSite = "";
+  }
   // Mirrors the database rules; the database still has the final say.
   const canEdit = a.status === "draft" && (isOwner || isApprover);
 
@@ -214,8 +222,21 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
           <div className="mt-2">
             <WorkflowActions id={a.id} status={a.status} isApprover={isApprover} isOwner={isOwner} />
           </div>
-          {a.status === "approved" ? (
-            <p className="mt-3 text-xs text-muted">Publishing to the site arrives in stage 8. Approved content is locked, so what was approved is exactly what will go live.</p>
+          {a.status === "approved" && isApprover && a.slug ? (
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold">Publish</h3>
+              <div className="mt-2">
+                <PublishPanel
+                  articleId={a.id}
+                  slug={a.slug}
+                  siteUrl={publishSite}
+                  configured={isPublishConfigured()}
+                  job={jobs[0] ? { id: jobs[0].id, state: jobs[0].state as NonNullable<LatestJob>["state"], pr_url: jobs[0].pr_url, error_message: jobs[0].error_message } : null}
+                />
+              </div>
+            </div>
+          ) : a.status === "approved" ? (
+            <p className="mt-3 text-xs text-muted">An approver publishes it to the website. Approved content is locked, so what was approved is exactly what will go live.</p>
           ) : null}
         </section>
       ) : null}
