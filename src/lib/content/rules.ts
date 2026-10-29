@@ -17,7 +17,9 @@ export const LIMITS = {
   keywordMax: 80,
   maxSecondaryKeywords: 2,
   maxTags: 8,
-  recommendedWords: 600,
+  /** The owner's guideline for article length. */
+  wordsMin: 800,
+  wordsMax: 1500,
 } as const;
 
 /** Every article is credited to the team, not a person (the owner's rule). */
@@ -28,8 +30,8 @@ export const SITE_PREFIX = "/resources/";
 export const SITE_HOSTS = ["epcmst.com", "www.epcmst.com"];
 
 export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-/** Same pattern as public.valid_tags() in the database. */
-export const TAG_PATTERN = /^[a-z0-9][a-z0-9 &-]{1,29}$/;
+/** Same pattern as public.valid_tags() in the database. Capitals allowed, as the site writes them ("CAPEX Risk"). */
+export const TAG_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 &.-]{1,29}$/;
 
 export type ArticleFields = {
   title: string | null;
@@ -57,14 +59,17 @@ export type SiteContext = {
 };
 export const NO_SITE: SiteContext = { sitePaths: [], reservedSlugs: [] };
 
-/** "EPC, Cost Control , epc" -> ["epc", "cost control"]. Tidies, never rejects. */
+/**
+ * "CAPEX Risk, Bill  C-5 , capex risk" -> ["CAPEX Risk", "Bill C-5"].
+ * Keeps capitals as typed; the same tag twice (in any capitalisation) is kept once. Tidies, never rejects.
+ */
 export function parseTags(text: string): string[] {
-  const seen = new Set<string>();
+  const out = new Map<string, string>();
   for (const raw of text.split(",")) {
-    const t = raw.trim().toLowerCase().replace(/\s+/g, " ");
-    if (t) seen.add(t);
+    const t = raw.trim().replace(/\s+/g, " ");
+    if (t && !out.has(t.toLowerCase())) out.set(t.toLowerCase(), t);
   }
-  return [...seen];
+  return [...out.values()];
 }
 
 /** Same count as the database's generated word_count column. */
@@ -158,6 +163,25 @@ export function internalLinks(body: string): string[] {
   return [...out];
 }
 
+// A "figure": a percentage, a dollar amount, or a number of millions or billions.
+const FIGURE = /\d[\d,.]*\s?%|\$\s?\d|\b\d[\d,.]*\s?(?:million|billion|trillion)\b/i;
+// EPCMst's own offer, which needs no outside source.
+const OWN_CLAIMS = [/100\s?%\s+refund/gi];
+
+/**
+ * Lines (paragraphs, list items, table rows) that state a figure but link to
+ * no source. The owner's rule: no statistics without a source.
+ */
+export function unsourcedFigures(body: string): string[] {
+  const out: string[] = [];
+  for (const line of body.split("\n")) {
+    const text = OWN_CLAIMS.reduce((t, re) => t.replace(re, ""), line);
+    if (!FIGURE.test(text) || /\]\(\s*<?https?:\/\//i.test(line)) continue;
+    out.push(line.replace(/^\s*(?:\d+\.|[-*+])\s+/, "").replace(/[*_#>|`]/g, "").replace(/\s+/g, " ").trim());
+  }
+  return out;
+}
+
 /** Guideline checks for findability. Needs a keyword to judge most of them. */
 export function guidelineChecks(a: ArticleFields, site: SiteContext = NO_SITE): GuidelineCheck[] {
   const kw = (a.target_keyword ?? "").trim();
@@ -173,6 +197,8 @@ export function guidelineChecks(a: ArticleFields, site: SiteContext = NO_SITE): 
   const extras = a.secondary_keywords.map((k) => k.trim()).filter(Boolean);
   const unusedExtras = extras.filter((k) => !includesCI(a.body_markdown, k) && !includesCI(a.title, k));
   const links = internalLinks(a.body_markdown);
+  const figures = unsourcedFigures(a.body_markdown);
+  const quote = (t: string) => `"${t.length > 80 ? `${t.slice(0, 79).trimEnd()}…` : t}"`;
   // Only judged when the site's page list is known.
   const broken = site.sitePaths.length > 0 ? links.filter((l) => !site.sitePaths.includes(l)) : [];
 
@@ -188,8 +214,10 @@ export function guidelineChecks(a: ArticleFields, site: SiteContext = NO_SITE): 
     check("extra_keywords_used", "Extra keywords in the text", unusedExtras.length === 0,
       extras.length ? "The text uses every extra keyword." : "No extra keywords set (optional, up to two).",
       `Not found in the text: ${unusedExtras.map((k) => `"${k}"`).join(", ")}.`),
-    check("min_length", "Length", words >= LIMITS.recommendedWords, `${words} words.`,
-      `${words} words. Articles of ${LIMITS.recommendedWords} or more words tend to rank better.`),
+    check("min_length", "Length", words >= LIMITS.wordsMin && words <= LIMITS.wordsMax, `${words} words.`,
+      words < LIMITS.wordsMin
+        ? `${words} words. Aim for ${LIMITS.wordsMin} to ${LIMITS.wordsMax}: longer articles tend to rank better.`
+        : `${words} words. Aim for ${LIMITS.wordsMin} to ${LIMITS.wordsMax}; this is longer than readers usually finish.`),
     check("has_subheading", "Has subheadings", /^##\s+\S/m.test(a.body_markdown), "The article is broken into sections.",
       "Add at least one subheading (a Heading 2 in the Doc)."),
     check("internal_link", "Links to another EPCMst page", links.length > 0,
@@ -197,5 +225,8 @@ export function guidelineChecks(a: ArticleFields, site: SiteContext = NO_SITE): 
     check("links_work", "Links point to real pages", broken.length === 0,
       links.length ? "Every link to the EPCMst site matches a real page." : "No links to the EPCMst site to check.",
       `No page on the site at: ${broken.slice(0, 5).join(", ")}${broken.length > 5 ? ` and ${broken.length - 5} more` : ""}.`),
+    check("figures_sourced", "Numbers have a source", figures.length === 0,
+      "Every percentage or dollar figure links to its source.",
+      `Link a source for ${figures.length === 1 ? "this figure" : `these ${figures.length} figures`}, or remove ${figures.length === 1 ? "it" : "them"}: ${figures.slice(0, 3).map(quote).join("; ")}${figures.length > 3 ? " …" : ""}`),
   ];
 }

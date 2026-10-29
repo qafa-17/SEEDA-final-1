@@ -9,7 +9,7 @@
     "lint": "eslint",
     "seed:generate": "tsx scripts/seed/generate.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/convert.test.ts && tsx tests/schema.test.ts && tsx tests/overview.test.ts && NODE_OPTIONS=--conditions=react-server tsx tests/drive.test.mts && NODE_OPTIONS=--conditions=react-server tsx tests/ideas.test.mts",
+    "test": "tsx tests/convert.test.ts && tsx tests/schema.test.ts && tsx tests/overview.test.ts && tsx tests/drafts.test.ts && NODE_OPTIONS=--conditions=react-server tsx tests/drive.test.mts && NODE_OPTIONS=--conditions=react-server tsx tests/ideas.test.mts",
     "map:build": "tsx scripts/map/build.ts"
   },
   "dependencies": {

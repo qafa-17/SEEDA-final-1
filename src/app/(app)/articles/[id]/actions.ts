@@ -67,9 +67,20 @@ export async function saveArticle(_prev: ActionState, fd: FormData): Promise<Act
   fields.secondary_keywords = fields.secondary_keywords.filter((k) => k.toLowerCase() !== primary);
 
   const supabase = await createClient();
+
+  // The text itself is only edited here for AI drafts. Imported articles
+  // take their text from the Google Doc, so a sent text is ignored for them.
+  const sentBody = fd.get("body_markdown");
+  let body: { body_markdown: string } | Record<string, never> = {};
+  if (typeof sentBody === "string") {
+    if (sentBody.length > 200_000) return { message: "The article text is too long to save.", fieldErrors: { body_markdown: "Too long." } };
+    const { data: current } = await supabase.from("articles").select("source").eq("id", id).maybeSingle();
+    if (current?.source === "ai_draft") body = { body_markdown: sentBody.replace(/\r\n?/g, "\n") };
+  }
+
   const { data, error } = await supabase
     .from("articles")
-    .update(fields)
+    .update({ ...fields, ...body })
     .eq("id", id)
     .eq("updated_at", updatedAt) // only if nobody changed it since this page loaded
     .select(ARTICLE_FIELDS);
@@ -152,6 +163,7 @@ export async function refreshFromDoc(_prev: ActionState, fd: FormData): Promise<
   if (!article) return { message: "This article no longer exists." };
   if (article.status !== "draft") return { message: "Only drafts can be refreshed from their Doc." };
 
+  if (!article.drive_file_id) return { message: "This draft was written in the hub, so it has no Google Doc to refresh from." };
   if (!DRIVE_ID.test(article.drive_file_id) || article.drive_file_id.startsWith("seed_")) {
     return { message: "Sample articles have no Google Doc to refresh from." };
   }

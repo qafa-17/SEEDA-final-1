@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Article" };
 
 type ArticleRow = ArticleFields & {
   id: string;
-  drive_file_id: string;
+  drive_file_id: string | null;
   source: "google_doc" | "ai_draft";
   status: ArticleStatus;
   word_count: number;
@@ -46,6 +46,7 @@ const checkLabels: Record<string, string> = {
   has_subheading: "Has subheadings",
   internal_link: "Links to another EPCMst page",
   links_work: "Links point to real pages",
+  figures_sourced: "Numbers have a source",
 };
 
 function Field({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
@@ -91,7 +92,9 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
   );
   const jobs = (jobsRes.data ?? []) as JobRow[];
   const problems = blockingProblems(a, site);
-  const isSample = a.drive_file_id.startsWith("seed_");
+  const isSample = a.drive_file_id?.startsWith("seed_") ?? false;
+  const isAi = a.source === "ai_draft";
+  const hasDoc = Boolean(a.drive_file_id) && !isSample;
   const ownerName = a.owner_id ? a.owner?.full_name || "Unnamed member" : FORMER_MEMBER;
   const isOwner = a.owner_id === user.id;
   const isApprover = user.role === "approver";
@@ -100,7 +103,7 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
 
   const articleText = (
     <section aria-labelledby="body" className="rounded-lg border border-border bg-surface p-5">
-      <h2 id="body" className="font-semibold">Article text</h2>
+      <h2 id="body" className="font-semibold">{isAi && canEdit ? "Preview (as last saved)" : "Article text"}</h2>
       {a.body_markdown.trim() ? (
         // react-markdown never renders raw HTML, so text from a Doc cannot inject scripts.
         <div className="article-text mt-3">
@@ -109,7 +112,7 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
           </Markdown>
         </div>
       ) : (
-        <p className="mt-3 text-sm italic text-muted">No text yet. It appears here once the Doc is converted.</p>
+        <p className="mt-3 text-sm italic text-muted">{isAi ? "No text yet." : "No text yet. It appears here once the Doc is converted."}</p>
       )}
     </section>
   );
@@ -122,7 +125,7 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
               {events.map((e) => (
                 <li key={e.id} className="relative">
                   <span aria-hidden className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-primary" />
-                  <p className="font-medium">{eventLabels[e.kind] ?? e.kind}</p>
+                  <p className="font-medium">{e.kind === "created" && isAi ? "Written by AI from research" : eventLabels[e.kind] ?? e.kind}</p>
                   <p className="text-xs text-muted">
                     {e.actor_id ? e.actor?.full_name || "Unnamed member" : FORMER_MEMBER} · {formatDateTime(e.created_at)}
                   </p>
@@ -171,9 +174,9 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
             Owned by {ownerName} · {a.source === "ai_draft" ? "generated" : "imported"} {formatDate(a.created_at)} · updated {formatDate(a.updated_at)}
           </p>
         </div>
-        {isSample ? null : (
+        {!hasDoc ? null : (
           <a
-            href={`https://docs.google.com/document/d/${encodeURIComponent(a.drive_file_id)}/edit`}
+            href={`https://docs.google.com/document/d/${encodeURIComponent(a.drive_file_id ?? "")}/edit`}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-border/40"
@@ -190,6 +193,17 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
             <FormMessage message={`${Number(notes.images)} image${Number(notes.images) === 1 ? " was" : "s were"} left out of the text. Images aren't supported yet.`} />
           ) : null}
           {notes.truncated ? <FormMessage message="The Doc was very long, so only the first part was imported. Consider splitting it." /> : null}
+        </div>
+      ) : null}
+      {notes.generated ? (
+        <div className="mt-4 space-y-2">
+          <FormMessage
+            tone="success"
+            message="The AI wrote this draft from the team's research. Read it all the way through before submitting: check every fact and number against its linked source, make sure it names no clients or prices, and edit anything that doesn't sound like EPCMst. Then add a publish date."
+          />
+          {notes.links ? (
+            <FormMessage message={`${Number(notes.links)} link${Number(notes.links) === 1 ? " was" : "s were"} taken out because ${Number(notes.links) === 1 ? "it pointed" : "they pointed"} somewhere other than the research sources or EPCMst's own pages. The words were kept.`} />
+          ) : null}
         </div>
       ) : null}
       {a.status === "in_review" || a.status === "approved" ? (
@@ -220,7 +234,8 @@ export default async function ArticlePage({ params, searchParams }: PageProps<"/
             types={(typesRes.data ?? []) as { id: number; label: string }[]}
             areas={(areasRes.data ?? []) as { id: number; label: string }[]}
             afterForm={articleText}
-            canRefresh={!isSample}
+            canRefresh={hasDoc}
+            editableBody={isAi}
             site={site}
             keywords={((keywordsRes.data ?? []) as { phrase: string }[]).map((k) => k.phrase)}
           >

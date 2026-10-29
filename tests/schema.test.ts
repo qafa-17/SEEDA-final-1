@@ -1,7 +1,7 @@
 // The Zod front-matter schema and the plain-language blocking rules must
 // agree: an article passes one exactly when it passes the other.
 import assert from "node:assert/strict";
-import { blockingIssues, guidelineChecks, internalLinks, parseTags, wordCount, type ArticleFields, type SiteContext } from "../src/lib/content/rules";
+import { blockingIssues, guidelineChecks, internalLinks, parseTags, unsourcedFigures, wordCount, type ArticleFields, type SiteContext } from "../src/lib/content/rules";
 import { frontmatterSchema, toFrontmatter } from "../src/lib/content/schema";
 import { pageList } from "../src/lib/pagination";
 
@@ -57,7 +57,13 @@ assert.deepEqual(issuesOf({ ...good, slug: "taken-slug" }).map((i) => i.message)
 assert.deepEqual(issuesOf({ ...good, slug: "taken-slug" }, { sitePaths: [], reservedSlugs: [] }), []);
 
 // Tags are tidied, not rejected.
-assert.deepEqual(parseTags(" EPC,  Cost   Control ,epc,, Q&A "), ["epc", "cost control", "q&a"]);
+assert.deepEqual(parseTags(" EPC,  Cost   Control ,epc,, Q&A "), ["EPC", "Cost Control", "Q&A"]);
+assert.deepEqual(parseTags("CAPEX Risk, Bill C-5, capex risk"), ["CAPEX Risk", "Bill C-5"]);
+
+// Numbers need a source; EPCMst's own refund guarantee does not.
+assert.deepEqual(unsourcedFigures("Costs rose 15% last year.\nCosts rose [15%](https://example.com/report).\nA 100% refund guarantee.\nAbout $2 million in downtime."),
+  ["Costs rose 15% last year.", "About $2 million in downtime."]);
+assert.deepEqual(unsourcedFigures("Three steps to take in 2026."), []);
 
 // Links: trailing slashes, anchors and the full site address are all understood.
 assert.deepEqual(internalLinks(good.body_markdown), ["/services/procurement", "/about"]);

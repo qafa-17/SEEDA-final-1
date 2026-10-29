@@ -12,8 +12,15 @@ import { isAiConfigured, summarySchema } from "@/lib/ideas/summarize";
 import { ResultView } from "./result-view";
 import { SearchForm } from "./search-form";
 import { IdeasMap, type MapArea } from "./ideas-map";
+import { HeadlinePanel } from "./headline-panel";
+import { PlannedArticles } from "./planned-articles";
+import { storedHeadlines } from "@/lib/drafts/headlines";
+import { DRAFT_LIMITS } from "@/lib/drafts/style";
 
 export const metadata: Metadata = { title: "Ideas" };
+
+// Writing a draft can take the AI up to a minute or two.
+export const maxDuration = 120;
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
@@ -33,6 +40,8 @@ type Row = {
   requester: { full_name: string } | null;
 };
 const COLUMNS = "id, keyword, region, results, summary, ai_status, created_at, requested_by, requester:profiles(full_name)";
+const HEADLINE_COLUMNS = "id, headlines, created_at, requested_by, requester:profiles(full_name)";
+type HeadlineRow = { id: string; headlines: unknown; created_at: string; requested_by: string | null; requester: { full_name: string } | null };
 
 export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
   await requireActiveUser();
@@ -43,14 +52,26 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
   // Recent research as a list (default) or on a map.
   const view = z.enum(["list", "map"]).catch("list").parse(first(sp.view) ?? "list");
 
+  const headlinesId = z.uuid().optional().catch(undefined).parse(first(sp.headlines) || undefined);
+
   const supabase = await createClient();
-  const [keywordsRes, usageRes, recentRes, selectedRes] = await Promise.all([
+  const [keywordsRes, usageRes, recentRes, selectedRes, headlineRes, draftUsageRes, areasRes, typesRes] = await Promise.all([
     supabase.from("keywords").select("phrase").eq("status", "active").order("phrase"),
     supabase.rpc("idea_search_usage").single(),
     view === "map"
       ? supabase.from("idea_searches").select("id, keyword, region, ai_status, created_at").order("created_at", { ascending: false }).limit(500)
       : supabase.from("idea_searches").select(COLUMNS).order("created_at", { ascending: false }).limit(12),
     searchId ? supabase.from("idea_searches").select(COLUMNS).eq("id", searchId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    // The headlines asked for in this link, or else the latest ones for this research.
+    searchId
+      ? (headlinesId
+          ? supabase.from("draft_requests").select(HEADLINE_COLUMNS).eq("id", headlinesId).eq("search_id", searchId)
+          : supabase.from("draft_requests").select(HEADLINE_COLUMNS).eq("search_id", searchId).eq("kind", "headlines").eq("status", "ok").order("created_at", { ascending: false }).limit(1)
+        ).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase.rpc("draft_request_usage").single(),
+    supabase.from("service_areas").select("slug, label"),
+    supabase.from("content_types").select("slug, label"),
   ]);
 
   const usage = usageRes.data as { mine_today: number; team_this_month: number } | null;
@@ -70,7 +91,18 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
   const results = selected ? resultsSchema.safeParse(selected.results) : null;
   const summary = selected?.ai_status === "ok" ? summarySchema.safeParse(selected.summary) : null;
   const region = selected ? regionBySlug(selected.region) : null;
-  const who = (r: Row) => (r.requested_by ? r.requester?.full_name || "Unnamed member" : FORMER_MEMBER);
+  const who = (r: { requested_by: string | null; requester: { full_name: string } | null }) => (r.requested_by ? r.requester?.full_name || "Unnamed member" : FORMER_MEMBER);
+
+  const headlineRow = headlineRes.data as unknown as HeadlineRow | null;
+  const headlineList = headlineRow ? storedHeadlines.safeParse(headlineRow.headlines) : null;
+  const savedHeadlines = headlineRow && headlineList?.success && headlineList.data.length
+    ? { requestId: headlineRow.id, headlines: headlineList.data, byline: `suggested for ${who(headlineRow)} ${timeAgo(headlineRow.created_at, now)}` }
+    : null;
+  const draftUsage = draftUsageRes.data as { drafts_today: number; drafts_this_month: number } | null;
+  const allowance = draftUsage
+    ? `You have ${Math.max(0, DRAFT_LIMITS.draftsPerPersonPerDay - Number(draftUsage.drafts_today))} of ${DRAFT_LIMITS.draftsPerPersonPerDay} drafts left today; the team has written ${Number(draftUsage.drafts_this_month)} of ${DRAFT_LIMITS.draftsTeamPerMonth} this month.`
+    : "";
+  const labels = (rows: { slug: string; label: string }[] | null) => Object.fromEntries((rows ?? []).map((r) => [r.slug, r.label]));
 
   return (
     <>
@@ -119,6 +151,19 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
           results={results?.success ? results.data : null}
         />
       ) : null}
+
+      {selected && region ? (
+        <HeadlinePanel
+          searchId={selected.id}
+          saved={savedHeadlines}
+          areaLabels={labels(areasRes.data as { slug: string; label: string }[] | null)}
+          typeLabels={labels(typesRes.data as { slug: string; label: string }[] | null)}
+          allowance={allowance}
+          disabled={!isAiConfigured()}
+        />
+      ) : (
+        <PlannedArticles />
+      )}
 
       <section aria-labelledby="recent" className="mt-10">
         <div className="flex flex-wrap items-center justify-between gap-3">

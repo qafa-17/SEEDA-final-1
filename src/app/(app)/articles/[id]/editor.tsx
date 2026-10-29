@@ -21,6 +21,8 @@ type Values = {
   secondary_keyword_2: string;
   tags: string;
   publish_date: string;
+  /** Only edited here for AI drafts; imported articles are edited in their Google Doc. */
+  body_markdown: string;
 };
 
 const toValues = (a: ArticleFields): Values => ({
@@ -34,6 +36,7 @@ const toValues = (a: ArticleFields): Values => ({
   secondary_keyword_2: a.secondary_keywords[1] ?? "",
   tags: a.tags.join(", "),
   publish_date: a.publish_date ?? "",
+  body_markdown: a.body_markdown,
 });
 
 const toFields = (v: Values, body: string): ArticleFields => ({
@@ -95,6 +98,7 @@ export function ArticleEditor({
   areas,
   afterForm,
   canRefresh,
+  editableBody,
   site,
   keywords,
   children,
@@ -105,6 +109,7 @@ export function ArticleEditor({
   areas: Option[];
   afterForm: React.ReactNode; // the article text, shown under the form
   canRefresh: boolean; // has a real Google Doc behind it
+  editableBody: boolean; // an AI draft: its text is edited here, not in a Doc
   site: SiteContext; // the live site's pages, for URL and link checks
   keywords: string[]; // the keyword library, offered as suggestions
   children: React.ReactNode; // server-rendered history etc., shown in the side column
@@ -117,7 +122,7 @@ export function ArticleEditor({
   const [saveState, saveAction] = useActionState(async (prev: ActionState, fd: FormData) => {
     const result = await saveArticle(prev, fd);
     if (result.ok && result.savedAt) {
-      const sent = Object.fromEntries((Object.keys(saved) as (keyof Values)[]).map((k) => [k, String(fd.get(k) ?? "")])) as Values;
+      const sent = Object.fromEntries((Object.keys(saved) as (keyof Values)[]).map((k) => [k, fd.has(k) ? String(fd.get(k)) : saved[k]])) as Values;
       setSaved(sent);
       setVersion(result.savedAt);
     }
@@ -134,7 +139,7 @@ export function ArticleEditor({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const dirty = JSON.stringify(values) !== JSON.stringify(saved);
-  const fields = useMemo(() => toFields(values, article.body_markdown), [values, article.body_markdown]);
+  const fields = useMemo(() => toFields(values, editableBody ? values.body_markdown : article.body_markdown), [values, editableBody, article.body_markdown]);
   const issues = useMemo(() => blockingIssues({ ...fields, word_count: wordCount(fields.body_markdown) }, site), [fields, site]);
   const problems = issues.map((i) => i.message);
   const tips = useMemo(() => guidelineChecks(fields, site), [fields, site]);
@@ -254,7 +259,7 @@ export function ArticleEditor({
                 <label htmlFor="tags" className="text-sm font-medium">Tags</label>
                 <span className={`text-xs ${tagList.length > LIMITS.maxTags ? "font-semibold text-danger" : "text-muted"}`}>{tagList.length} / {LIMITS.maxTags}</span>
               </div>
-              <input id="tags" name="tags" value={values.tags} onChange={set("tags")} maxLength={400} placeholder="e.g. pipeline engineering, alberta, cost control" aria-describedby="tags-help" className={`${inputClass} ${border(Boolean(err("tags") ?? issue("tags")) || badTags.length > 0)}`} />
+              <input id="tags" name="tags" value={values.tags} onChange={set("tags")} maxLength={400} placeholder="e.g. CAPEX Risk, EPC Procurement, Western Canada" aria-describedby="tags-help" className={`${inputClass} ${border(Boolean(err("tags") ?? issue("tags")) || badTags.length > 0)}`} />
               {tagList.length > 0 ? (
                 <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Tags as they will be saved">
                   {tagList.map((t) => (
@@ -262,7 +267,7 @@ export function ArticleEditor({
                   ))}
                 </ul>
               ) : null}
-              {note("tags", badTags.length > 0 ? "Tags are 2 to 30 characters: letters, numbers, spaces, & and hyphens." : tagList.length > LIMITS.maxTags ? `Use ${LIMITS.maxTags} tags or fewer.` : undefined) ?? (
+              {note("tags", badTags.length > 0 ? "Tags are 2 to 30 characters: letters, numbers, spaces, &, full stops and hyphens." : tagList.length > LIMITS.maxTags ? `Use ${LIMITS.maxTags} tags or fewer.` : undefined) ?? (
                 <p id="tags-help" className="mt-1 text-xs text-muted">Separate tags with commas. They group related articles on the site.</p>
               )}
             </div>
@@ -280,6 +285,31 @@ export function ArticleEditor({
               </div>
             </div>
           </div>
+
+          {editableBody ? (
+            <div className="mt-4">
+              <div className="flex items-baseline justify-between gap-2">
+                <label htmlFor="body_markdown" className="text-sm font-medium">Article text</label>
+                <span className={`text-xs ${wordCount(values.body_markdown) < LIMITS.wordsMin || wordCount(values.body_markdown) > LIMITS.wordsMax ? "font-semibold text-warning" : "text-muted"}`} aria-live="polite">
+                  {wordCount(values.body_markdown)} words · aim for {LIMITS.wordsMin} to {LIMITS.wordsMax}
+                </span>
+              </div>
+              <textarea
+                id="body_markdown"
+                name="body_markdown"
+                value={values.body_markdown}
+                onChange={set("body_markdown")}
+                rows={22}
+                maxLength={200000}
+                spellCheck
+                aria-describedby="body-help"
+                className={`${inputClass} border-border font-mono text-[13px] leading-relaxed`}
+              />
+              <p id="body-help" className="mt-1 text-xs text-muted">
+                Written in Markdown: <code>## Heading</code>, <code>**bold**</code>, <code>- list item</code>, <code>[link text](/services/procurement)</code>. The preview below updates when you save.
+              </p>
+            </div>
+          ) : null}
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <SaveButton dirty={dirty} />
@@ -361,7 +391,7 @@ export function ArticleEditor({
 
         <section aria-labelledby="delete" className="rounded-lg border border-danger/30 bg-surface p-5">
           <h2 id="delete" className="font-semibold text-danger">Delete this draft</h2>
-          <p className="mt-1 text-xs text-muted">Removes it from the hub. The Google Doc is not touched.</p>
+          <p className="mt-1 text-xs text-muted">{editableBody ? "Removes it from the hub. This draft has no Google Doc, so its text goes too." : "Removes it from the hub. The Google Doc is not touched."}</p>
           {confirmDelete ? (
             <form action={deleteAction} className="mt-3 flex flex-wrap gap-2">
               <input type="hidden" name="id" value={article.id} />

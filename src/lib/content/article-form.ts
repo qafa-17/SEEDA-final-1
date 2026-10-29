@@ -41,14 +41,14 @@ export const saveArticleSchema = z.object({
     .max(LIMITS.maxSecondaryKeywords)
     .transform((ks) => [...new Map(ks.filter(Boolean).map((k) => [k.toLowerCase(), k])).values()])
     .pipe(z.array(z.string().min(LIMITS.keywordMin, "Keywords need at least 2 characters.").max(LIMITS.keywordMax, "Keep each keyword under 80 characters."))),
-  // Typed as one comma-separated line; tidied to lowercase and de-duplicated.
+  // Typed as one comma-separated line; tidied and de-duplicated (capitals kept).
   tags: z
     .string()
     .max(400, "That's too many tags.")
     .transform(parseTags)
     .pipe(
       z
-        .array(z.string().regex(TAG_PATTERN, "Tags are 2 to 30 characters: letters, numbers, spaces, & and hyphens."))
+        .array(z.string().regex(TAG_PATTERN, "Tags are 2 to 30 characters: letters, numbers, spaces, &, full stops and hyphens."))
         .max(LIMITS.maxTags, `Use ${LIMITS.maxTags} tags or fewer.`),
     ),
   author_name: optionalText(100, "Keep the author name under 100 characters."),
