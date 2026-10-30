@@ -10,10 +10,26 @@ import { AUDIENCE, BRAND_FACTS, RULES, STRUCTURE } from "./style";
 // no heading 1, and no links except to the research sources, EPCMst's own
 // pages and its support email. Everything else stays for a person to edit.
 
+// The AI answers in blocks (a paragraph, a heading, a list, a quote, a
+// table), and the hub writes the Markdown itself. Asked for one long
+// Markdown string, the AI sometimes dropped every line break, which turned
+// headings, lists and tables into stray "##", "1." and "|" in the text.
+const BLOCK_KINDS = ["paragraph", "heading2", "heading3", "numbered", "bullets", "quote", "table"] as const;
+
 export const draftAiSchema = z.object({
   meta_description: z.string().trim().min(20).max(400),
   tags: z.array(z.string().trim().max(60)).max(12),
-  body_markdown: z.string().min(400).max(40_000),
+  blocks: z
+    .array(
+      z.object({
+        kind: z.enum(BLOCK_KINDS),
+        text: z.string().max(4000).default(""),
+        items: z.array(z.string().max(2000)).max(15).default([]),
+        rows: z.array(z.object({ cells: z.array(z.string().max(400)).max(6) })).max(12).default([]),
+      }),
+    )
+    .min(4)
+    .max(80),
 });
 export type DraftAi = z.infer<typeof draftAiSchema>;
 
@@ -22,10 +38,85 @@ export const draftResponseSchema = {
   properties: {
     meta_description: { type: "STRING" },
     tags: { type: "ARRAY", items: { type: "STRING" } },
-    body_markdown: { type: "STRING" },
+    blocks: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          kind: { type: "STRING", enum: [...BLOCK_KINDS] },
+          text: { type: "STRING" },
+          items: { type: "ARRAY", items: { type: "STRING" } },
+          rows: { type: "ARRAY", items: { type: "OBJECT", properties: { cells: { type: "ARRAY", items: { type: "STRING" } } }, required: ["cells"] } },
+        },
+        required: ["kind"],
+      },
+    },
   },
-  required: ["meta_description", "tags", "body_markdown"],
+  required: ["meta_description", "tags", "blocks"],
 };
+
+/** One line of inline text: no line breaks, and nothing that would start a heading, list or quote. */
+const inline = (s: string) => s.replace(/\s+/g, " ").trim();
+const plain = (s: string) => inline(s).replace(/^(#+\s*|>\s*|[-*+]\s+|\d+[.)]\s+)+/, "");
+const cell = (s: string) => plain(s).replace(/\|/g, "/");
+
+/** Write the blocks as Markdown, one block per paragraph. */
+export function blocksToMarkdown(blocks: DraftAi["blocks"]): string {
+  const out: string[] = [];
+  for (const b of blocks) {
+    const text = plain(b.text);
+    const items = b.items.map(plain).filter(Boolean);
+    switch (b.kind) {
+      case "paragraph":
+        if (text) out.push(text);
+        break;
+      case "heading2":
+      case "heading3":
+        if (text) out.push(`${b.kind === "heading2" ? "##" : "###"} ${text.replace(/[*_]/g, "")}`);
+        break;
+      case "numbered":
+        if (items.length) out.push(items.map((it, i) => `${i + 1}. ${it}`).join("\n"));
+        break;
+      case "bullets":
+        if (items.length) out.push(items.map((it) => `- ${it}`).join("\n"));
+        break;
+      case "quote":
+        if (text) out.push(`> ${text.replace(/^["“]|["”]$/g, "")}`);
+        break;
+      case "table": {
+        const rows = b.rows.map((r) => r.cells.map(cell)).filter((r) => r.some(Boolean));
+        if (rows.length < 2) break;
+        const width = Math.max(...rows.map((r) => r.length));
+        const line = (r: string[]) => `| ${Array.from({ length: width }, (_, i) => r[i] ?? "").join(" | ")} |`;
+        out.push([line(rows[0]), `| ${Array(width).fill("---").join(" | ")} |`, ...rows.slice(1).map(line)].join("\n"));
+        break;
+      }
+    }
+  }
+  return out.join("\n\n");
+}
+
+/**
+ * Put back the line breaks in Markdown that lost them, where every break
+ * became two spaces ("text.  ## Heading  1. **Point:** …  | a | b |  | --- |").
+ * Text that already has its line breaks is returned unchanged.
+ */
+export function restoreLineBreaks(md: string): string {
+  const body = md.replace(/\r\n?/g, "\n");
+  const flat = body.length > 400 && (body.match(/\n/g)?.length ?? 0) < 3 && /\S {2,}(?:#{2,3} |\d+\. |[-*] |> |\|)/.test(body);
+  if (!flat) return md;
+  const chunks = body.split(/ {2,}|\n+/).map((c) => c.trim()).filter(Boolean);
+  const kind = (c: string) => (c.startsWith("|") ? "row" : /^\d+\. /.test(c) ? "num" : /^[-*] /.test(c) ? "bullet" : "other");
+  let out = "";
+  chunks.forEach((c, i) => {
+    if (i > 0) {
+      const a = kind(chunks[i - 1]);
+      out += a !== "other" && a === kind(c) ? "\n" : "\n\n";
+    }
+    out += c;
+  });
+  return out;
+}
 
 export type DraftContext = {
   headline: Headline;
@@ -60,6 +151,7 @@ ${BRAND_FACTS.map((f) => `- ${f}`).join("\n")}
 Rules:
 ${RULES.map((r) => `- ${r}`).join("\n")}
 - Link the service page at least once in the body, as a Markdown link to the path ${service.path}.
+- Bold and links are written inside the text in Markdown ("**bold**", "[text](url)"). Do not write source numbers like [1] in the text: link the source itself.
 - Links allowed: the numbered sources below (exact URL), EPCMst page paths given above, and mailto:support@epcmst.com. No other links, no images, no HTML.
 
 Structure (follow it in this order):
@@ -71,7 +163,12 @@ ${sources || "(no sources: make no statistical claims)"}
 </sources>
 
 Answer in JSON:
-- body_markdown: the article body in Markdown, starting with the opening paragraphs. Use "## " and "### " headings only, never "# ".
+- blocks: the article body, in order, as a list of blocks. Each block has a "kind":
+  - "paragraph": one paragraph in "text".
+  - "heading2" or "heading3": the heading words in "text" (no "#" signs).
+  - "numbered" or "bullets": one list, each point as one entry in "items" (no "1." or "-" in front).
+  - "quote": one pull quote sentence in "text".
+  - "table": "rows", each with its "cells"; the first row is the column names.
 - meta_description: 120 to 155 characters, plain text, includes the main keyword, says what the reader gets.
 - tags: 3 to 5 short topic tags in the site's style, Title Case, 2 to 30 characters each, for example "CAPEX Risk", "EPC Procurement", "Western Canada".`;
 }
@@ -106,9 +203,15 @@ const clipAtWord = (s: string, max: number) => {
 
 export type CleanDraft = { body: string; meta: string; tags: string[]; linksRemoved: number };
 
-export function cleanDraft(raw: DraftAi, opts: { title: string; sourceUrls: string[]; sitePaths: string[] }): CleanDraft {
+export function cleanDraft(
+  raw: { meta_description: string; tags: string[]; body_markdown: string },
+  opts: { title: string; sourceUrls: string[]; sitePaths: string[] },
+): CleanDraft {
   let linksRemoved = 0;
-  let body = raw.body_markdown.replace(/\r\n?/g, "\n");
+  let body = restoreLineBreaks(raw.body_markdown).replace(/\r\n?/g, "\n");
+
+  // Leftover source numbers ("... in Western Canada [1]") point nowhere on the site.
+  body = body.replace(/\s?\[\d{1,2}\](?!\()/g, "");
 
   // Raw HTML would show on the live site as markup; drop the tags, keep the words.
   body = body.replace(/<!--[\s\S]*?-->/g, "").replace(/<\/?[a-z][^>]*>/gi, "");

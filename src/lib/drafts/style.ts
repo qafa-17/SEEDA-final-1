@@ -31,13 +31,13 @@ export const RULES = [
 ];
 
 /** The shape of the owner's reference article, which drafts follow. */
-export const STRUCTURE = `1. Two short opening paragraphs (no heading above them). The first states the situation the reader faces in the area, and uses the main keyword naturally. The second says what the article will help them do.
-2. "## " section on the problem or current landscape, with a numbered list of 3 points. Each point starts with a bold lead-in ending in a colon, for example "1. **Supply chain volatility:** ...".
-3. "## " section on the better approach, a short paragraph, then one pull quote as a Markdown blockquote ("> ...").
-4. A "### " sub-section with 3 or 4 bullets, each starting with a bold lead-in.
-5. Where it fits the topic, one "## " section with a Markdown comparison table (3 or 4 rows, 3 or 4 columns). Do not put any unsourced numbers in the table.
-6. "## " section with 3 practical next steps as a numbered list, each starting with a bold lead-in.
-7. A closing "### " call to action: one or two sentences on how EPCMst helps, then two bullets: "**Email our team:** [support@epcmst.com](mailto:support@epcmst.com)" and "**Explore capabilities:** [<the service page's name>](<the service page's path>)".`;
+export const STRUCTURE = `1. Two "paragraph" blocks to open (no heading above them). The first states the situation the reader faces in the area, and uses the main keyword naturally. The second says what the article will help them do.
+2. A "heading2" on the problem or current landscape, a "paragraph", then a "numbered" block of 3 points. Each point starts with a bold lead-in ending in a colon, for example "**Supply chain volatility:** ...".
+3. A "heading2" on the better approach, a short "paragraph", then one "quote" block: a single unattributed insight sentence.
+4. A "heading3" with a "bullets" block of 3 or 4 points, each starting with a bold lead-in.
+5. Where it fits the topic, a "heading2" and a "table" block comparing 3 or 4 options: the first row is the column names, then 3 or 4 rows. Do not put any unsourced numbers in the table.
+6. A "heading2" with a short "paragraph" and a "numbered" block of 3 practical next steps, each starting with a bold lead-in.
+7. A closing "heading3" call to action: a "paragraph" of one or two sentences on how EPCMst helps, then a "bullets" block with exactly two items: "**Email our team:** [support@epcmst.com](mailto:support@epcmst.com)" and "**Explore capabilities:** [<the service page's name>](<the service page's path>)".`;
 
 /**
  * Articles the owner has already planned (website analysis, 9 Oct 2026).

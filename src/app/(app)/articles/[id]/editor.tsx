@@ -8,6 +8,7 @@ import {
   type ArticleFields, type FieldName, type SiteContext,
 } from "@/lib/content/rules";
 import { changeStatus, deleteDraft, refreshFromDoc, saveArticle, type ActionState } from "./actions";
+import { restoreLineBreaks } from "@/lib/drafts/write";
 
 type Option = { id: number; label: string };
 type Values = {
@@ -294,6 +295,18 @@ export function ArticleEditor({
                   {wordCount(values.body_markdown)} words · aim for {LIMITS.wordsMin} to {LIMITS.wordsMax}
                 </span>
               </div>
+              {restoreLineBreaks(values.body_markdown) !== values.body_markdown ? (
+                <div role="status" className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
+                  <span>This text has lost its line breaks, so headings, lists and tables would show as stray ##, 1. and | symbols.</span>
+                  <button
+                    type="button"
+                    onClick={() => setValues((v) => ({ ...v, body_markdown: restoreLineBreaks(v.body_markdown).replace(/\s?\[\d{1,2}\](?!\()/g, "") }))}
+                    className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+                  >
+                    Fix the layout
+                  </button>
+                </div>
+              ) : null}
               <textarea
                 id="body_markdown"
                 name="body_markdown"

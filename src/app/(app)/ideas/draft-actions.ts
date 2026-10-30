@@ -12,7 +12,7 @@ import { countryLabel, regionBySlug } from "@/lib/ideas/regions";
 import { summarySchema } from "@/lib/ideas/summarize";
 import type { SearchResult } from "@/lib/ideas/search";
 import { buildHeadlinePrompt, cleanHeadlines, headlineAiSchema, headlineResponseSchema, plannedFor, storedHeadlines, type Headline } from "@/lib/drafts/headlines";
-import { buildDraftPrompt, cleanDraft, draftAiSchema, draftResponseSchema } from "@/lib/drafts/write";
+import { blocksToMarkdown, buildDraftPrompt, cleanDraft, draftAiSchema, draftResponseSchema } from "@/lib/drafts/write";
 import { DRAFT_LIMITS } from "@/lib/drafts/style";
 
 export type DraftActionState = { message?: string };
@@ -145,7 +145,7 @@ export async function writeDraft(_prev: DraftActionState, fd: FormData): Promise
     return { message: "The AI service didn't finish the draft. Please try again in a moment." };
   }
 
-  const draft = cleanDraft(ai.data, { title: headline.title, sourceUrls: results.map((r) => r.url), sitePaths: site.sitePaths });
+  const draft = cleanDraft({ meta_description: ai.data.meta_description, tags: ai.data.tags, body_markdown: blocksToMarkdown(ai.data.blocks) }, { title: headline.title, sourceUrls: results.map((r) => r.url), sitePaths: site.sitePaths });
 
   // Suggest a URL from the title if nobody uses it yet.
   let slug: string | null = slugify(headline.title) || null;

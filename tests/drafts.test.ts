@@ -1,7 +1,7 @@
 // Generate draft: headline checking and draft clean-up.
 import assert from "node:assert/strict";
 import { buildHeadlinePrompt, cleanHeadlines, plannedFor, type HeadlineContext } from "../src/lib/drafts/headlines";
-import { allowedLink, buildDraftPrompt, cleanDraft } from "../src/lib/drafts/write";
+import { allowedLink, blocksToMarkdown, buildDraftPrompt, cleanDraft, restoreLineBreaks } from "../src/lib/drafts/write";
 import { PLANNED } from "../src/lib/drafts/style";
 import { LIMITS, guidelineChecks } from "../src/lib/content/rules";
 
@@ -106,5 +106,36 @@ const checks = Object.fromEntries(
 assert.equal(checks.figures_sourced, "pass");
 assert.equal(checks.links_work, "pass");
 assert.equal(checks.internal_link, "pass");
+
+// Blocks become Markdown with every line break in place.
+const md = blocksToMarkdown([
+  { kind: "paragraph", text: "Opening   paragraph\nwith a break.", items: [], rows: [] },
+  { kind: "heading2", text: "## The **Landscape**", items: [], rows: [] },
+  { kind: "numbered", text: "", items: ["1. **Slow placement:** weeks pass.", "**Markups:** high."], rows: [] },
+  { kind: "quote", text: "“Execution beats capacity.”", items: [], rows: [] },
+  { kind: "bullets", text: "", items: ["- **Email our team:** [support@epcmst.com](mailto:support@epcmst.com)"], rows: [] },
+  { kind: "table", text: "", items: [], rows: [{ cells: ["Model", "Speed"] }, { cells: ["Agency | firm", "Slow"] }, { cells: ["EPCMst"] }] },
+  { kind: "heading3", text: "", items: [], rows: [] },
+]);
+assert.equal(md, [
+  "Opening paragraph with a break.",
+  "## The Landscape",
+  "1. **Slow placement:** weeks pass.\n2. **Markups:** high.",
+  "> Execution beats capacity.",
+  "- **Email our team:** [support@epcmst.com](mailto:support@epcmst.com)",
+  "| Model | Speed |\n| --- | --- |\n| Agency / firm | Slow |\n| EPCMst |  |",
+].join("\n\n"));
+
+// Text that lost its line breaks (every break became two spaces) gets them back.
+const flat = "Opening paragraph about cost control in Alberta, long enough to look like a real article body. ".repeat(4) +
+  " ## The Landscape  Intro line:  1. **One:** a.  2. **Two:** b.  > A pull quote.  - **Point:** c.  - **Point two:** d.  | A | B |  | --- | --- |  | x | y |  ### Next  Closing.";
+assert.equal(restoreLineBreaks(flat).split("\n\n").slice(1).join("\n\n"), [
+  "## The Landscape", "Intro line:", "1. **One:** a.\n2. **Two:** b.", "> A pull quote.",
+  "- **Point:** c.\n- **Point two:** d.", "| A | B |\n| --- | --- |\n| x | y |", "### Next", "Closing.",
+].join("\n\n"));
+assert.equal(restoreLineBreaks(md), md, "proper Markdown is left alone");
+assert.equal(restoreLineBreaks("Short text.  Two spaces here."), "Short text.  Two spaces here.", "ordinary double spaces are left alone");
+assert.equal(cleanDraft({ meta_description: "x".repeat(80), tags: [], body_markdown: "Fact here [2]. And [a link](/services/procurement)." }, { title: "T", sourceUrls: [], sitePaths: [] }).body,
+  "Fact here. And [a link](/services/procurement).\n", "bare source numbers removed");
 
 console.log("drafts tests passed");
