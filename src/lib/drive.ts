@@ -19,6 +19,9 @@ export type DriveErrorKind = "not_configured" | "auth" | "not_found" | "not_in_f
 export class DriveError extends Error {
   constructor(public kind: DriveErrorKind, detail?: string) {
     super(detail ?? kind);
+    // Every failure leaves a labelled line in the server log (Vercel > Logs).
+    // Only our own short descriptions are logged, never keys or tokens.
+    console.error(`[drive] ${kind}`, detail ?? "");
   }
 }
 

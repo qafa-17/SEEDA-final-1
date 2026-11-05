@@ -14,6 +14,8 @@ export type SearchErrorKind = "not_configured" | "auth" | "rate_limited" | "out_
 export class SearchError extends Error {
   constructor(public kind: SearchErrorKind) {
     super(kind);
+    // Every failure leaves a labelled line in the server log (Vercel > Logs). Never the key.
+    console.error(`[search] ${kind}`);
   }
 }
 

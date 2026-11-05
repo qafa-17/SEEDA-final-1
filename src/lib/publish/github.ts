@@ -26,6 +26,8 @@ export type PublishErrorKind = "not_configured" | "config" | "auth" | "forbidden
 export class PublishError extends Error {
   constructor(public kind: PublishErrorKind, public detail?: string) {
     super(kind);
+    // Every failure leaves a labelled line in the server log (Vercel > Logs). Never the token.
+    console.error(`[github] ${kind}`, detail ?? "");
   }
 }
 
@@ -101,15 +103,15 @@ export async function publishFile(opts: {
 
   const existing = await gh<unknown>("GET", `/repos/${repo}/contents/${enc(opts.path)}?ref=${encodeURIComponent(base)}`);
   if (existing.status === 200) throw new PublishError("exists");
-  if (existing.status !== 404) throw new PublishError("unavailable");
+  if (existing.status !== 404) throw new PublishError("unavailable", `checking for an existing file: GitHub answered ${existing.status}`);
 
   const ref = await gh<{ object?: { sha?: string } }>("GET", `/repos/${repo}/git/ref/heads/${enc(base)}`);
   if (ref.status === 404) throw new PublishError("not_found");
   const sha = ref.data?.object?.sha;
-  if (ref.status !== 200 || !sha) throw new PublishError("unavailable");
+  if (ref.status !== 200 || !sha) throw new PublishError("unavailable", `reading the main branch: GitHub answered ${ref.status}`);
 
   const made = await gh<unknown>("POST", `/repos/${repo}/git/refs`, { ref: `refs/heads/${opts.branchName}`, sha });
-  if (made.status !== 201 && made.status !== 422) throw new PublishError(made.status === 404 ? "not_found" : "unavailable");
+  if (made.status !== 201 && made.status !== 422) throw new PublishError(made.status === 404 ? "not_found" : "unavailable", `creating the branch: GitHub answered ${made.status}`);
 
   const put = await gh<unknown>("PUT", `/repos/${repo}/contents/${enc(opts.path)}`, {
     message: `Publish: ${opts.title}`,
@@ -117,7 +119,7 @@ export async function publishFile(opts: {
     branch: opts.branchName,
   });
   if (put.status === 422) throw new PublishError("exists");
-  if (put.status !== 201 && put.status !== 200) throw new PublishError("unavailable");
+  if (put.status !== 201 && put.status !== 200) throw new PublishError("unavailable", `adding the file: GitHub answered ${put.status}`);
 
   const pr = await gh<{ number?: number; html_url?: string }>("POST", `/repos/${repo}/pulls`, {
     title: `Publish: ${opts.title}`,
@@ -125,7 +127,7 @@ export async function publishFile(opts: {
     base,
     body: opts.body,
   });
-  if (pr.status !== 201 || !pr.data?.number || !pr.data.html_url) throw new PublishError("unavailable");
+  if (pr.status !== 201 || !pr.data?.number || !pr.data.html_url) throw new PublishError("unavailable", `opening the pull request: GitHub answered ${pr.status}`);
   const opened = { number: pr.data.number, url: pr.data.html_url };
   await opts.onOpened(opened);
 
