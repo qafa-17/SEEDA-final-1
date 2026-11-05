@@ -12,8 +12,9 @@ import { countryLabel, regionBySlug } from "@/lib/ideas/regions";
 import { summarySchema } from "@/lib/ideas/summarize";
 import type { SearchResult } from "@/lib/ideas/search";
 import { buildHeadlinePrompt, cleanHeadlines, headlineAiSchema, headlineResponseSchema, plannedFor, storedHeadlines, type Headline } from "@/lib/drafts/headlines";
-import { blocksToMarkdown, buildDraftPrompt, cleanDraft, draftAiSchema, draftResponseSchema } from "@/lib/drafts/write";
+import { blocksToMarkdown, buildDraftPrompt, cleanDraft, draftAiSchema, draftMarkdownResponseSchema, draftMarkdownSchema, draftResponseSchema } from "@/lib/drafts/write";
 import { DRAFT_LIMITS } from "@/lib/drafts/style";
+import { draftUsage } from "@/lib/drafts/usage";
 
 export type DraftActionState = { message?: string };
 
@@ -37,16 +38,10 @@ async function loadSearch(supabase: Supabase, id: string) {
   };
 }
 
-async function usage(supabase: Supabase) {
-  const { data, error } = await supabase.rpc("draft_request_usage").single();
-  if (error || !data) return null;
-  const u = data as { headlines_today: number; drafts_today: number; drafts_this_month: number };
-  return { headlinesToday: Number(u.headlines_today), draftsToday: Number(u.drafts_today), draftsMonth: Number(u.drafts_this_month) };
-}
 
 /** Step 1: suggest headlines for one piece of research, and save them for the team. */
 export async function suggestHeadlines(_prev: DraftActionState, fd: FormData): Promise<DraftActionState> {
-  await requireActiveUser();
+  const user = await requireActiveUser();
   const searchId = z.uuid().safeParse(fd.get("searchId"));
   if (!searchId.success) return { message: "That research couldn't be found." };
   if (!isAiConfigured()) return { message: "The AI service isn't connected yet. An admin needs to add the AI key." };
@@ -55,7 +50,7 @@ export async function suggestHeadlines(_prev: DraftActionState, fd: FormData): P
   const search = await loadSearch(supabase, searchId.data);
   if (!search) return { message: "That research couldn't be found." };
 
-  const used = await usage(supabase);
+  const used = await draftUsage(supabase, user.id);
   if (!used) return { message: "Couldn't check today's allowance. Please try again." };
   if (used.headlinesToday >= DRAFT_LIMITS.headlinesPerPersonPerDay) {
     return { message: `You've asked for headlines ${DRAFT_LIMITS.headlinesPerPersonPerDay} times today. This frees up 24 hours after each request.` };
@@ -99,7 +94,7 @@ export async function suggestHeadlines(_prev: DraftActionState, fd: FormData): P
 
 /** Step 2: write the draft for one chosen headline, and open it in the editor. */
 export async function writeDraft(_prev: DraftActionState, fd: FormData): Promise<DraftActionState> {
-  await requireActiveUser();
+  const user = await requireActiveUser();
   const input = z.object({ requestId: z.uuid(), index: z.coerce.number().int().min(0).max(7) }).safeParse({ requestId: fd.get("requestId"), index: fd.get("index") });
   if (!input.success) return { message: "That headline couldn't be found." };
   if (!isAiConfigured()) return { message: "The AI service isn't connected yet. An admin needs to add the AI key." };
@@ -111,7 +106,7 @@ export async function writeDraft(_prev: DraftActionState, fd: FormData): Promise
   if (!request || !headline) return { message: "That headline couldn't be found." };
   const search = request.search_id ? await loadSearch(supabase, request.search_id) : null;
 
-  const used = await usage(supabase);
+  const used = await draftUsage(supabase, user.id);
   if (!used) return { message: "Couldn't check today's allowance. Please try again." };
   if (used.draftsToday >= DRAFT_LIMITS.draftsPerPersonPerDay) {
     return { message: `You've written ${DRAFT_LIMITS.draftsPerPersonPerDay} drafts today. This frees up 24 hours after each one.` };
@@ -127,25 +122,42 @@ export async function writeDraft(_prev: DraftActionState, fd: FormData): Promise
   const type = typeRes.data as { id: number; label: string } | null;
   const results = search?.results ?? [];
 
-  const ai = await generateJson(
-    buildDraftPrompt({
-      headline,
-      areaLabel: search?.areaLabel ?? "Western Canada",
-      service: area ? { label: area.label, path: `/services/${area.slug}` } : null,
-      typeLabel: type?.label ?? "Blog Post",
-      summary: search?.summary ?? null,
-      results,
-    }),
-    draftResponseSchema,
-    draftAiSchema,
-    { temperature: 0.6, maxOutputTokens: 16_000, timeoutMs: 100_000 },
-  );
-  if (ai.status !== "ok") {
+  const context = {
+    headline,
+    areaLabel: search?.areaLabel ?? "Western Canada",
+    service: area ? { label: area.label, path: `/services/${area.slug}` } : null,
+    typeLabel: type?.label ?? "Blog Post",
+    summary: search?.summary ?? null,
+    results,
+  };
+  // First try: the article as blocks, so its layout can't be lost. If that
+  // fails, a second try asks for plain Markdown, whose line breaks are
+  // repaired afterwards if needed.
+  let body: string | null = null;
+  let meta = "";
+  let tags: string[] = [];
+  const first = await generateJson(buildDraftPrompt(context, "blocks"), draftResponseSchema, draftAiSchema, { temperature: 0.6, maxOutputTokens: 16_000, timeoutMs: 80_000 });
+  if (first.status === "ok") {
+    body = blocksToMarkdown(first.data.blocks);
+    ({ meta_description: meta, tags } = first.data);
+  }
+  let reason = first.status === "ok" ? "" : first.reason;
+  if (!body || body.length < 400) {
+    const second = await generateJson(buildDraftPrompt(context, "markdown"), draftMarkdownResponseSchema, draftMarkdownSchema, { temperature: 0.6, maxOutputTokens: 16_000, timeoutMs: 80_000 });
+    if (second.status === "ok") {
+      body = second.data.body_markdown;
+      ({ meta_description: meta, tags } = second.data);
+    } else {
+      reason = second.reason;
+      body = null;
+    }
+  }
+  if (!body) {
     await supabase.from("draft_requests").insert({ kind: "draft", search_id: search?.id ?? null, status: "failed" });
-    return { message: "The AI service didn't finish the draft. Please try again in a moment." };
+    return { message: `The AI service didn't finish the draft (${reason}). This attempt doesn't count toward your allowance. Please try again in a moment.` };
   }
 
-  const draft = cleanDraft({ meta_description: ai.data.meta_description, tags: ai.data.tags, body_markdown: blocksToMarkdown(ai.data.blocks) }, { title: headline.title, sourceUrls: results.map((r) => r.url), sitePaths: site.sitePaths });
+  const draft = cleanDraft({ meta_description: meta, tags, body_markdown: body }, { title: headline.title, sourceUrls: results.map((r) => r.url), sitePaths: site.sitePaths });
 
   // Suggest a URL from the title if nobody uses it yet.
   let slug: string | null = slugify(headline.title) || null;

@@ -1,7 +1,7 @@
 // Generate draft: headline checking and draft clean-up.
 import assert from "node:assert/strict";
 import { buildHeadlinePrompt, cleanHeadlines, plannedFor, type HeadlineContext } from "../src/lib/drafts/headlines";
-import { allowedLink, blocksToMarkdown, buildDraftPrompt, cleanDraft, restoreLineBreaks } from "../src/lib/drafts/write";
+import { allowedLink, blocksToMarkdown, buildDraftPrompt, cleanDraft, draftAiSchema, restoreLineBreaks } from "../src/lib/drafts/write";
 import { PLANNED } from "../src/lib/drafts/style";
 import { LIMITS, guidelineChecks } from "../src/lib/content/rules";
 
@@ -109,13 +109,13 @@ assert.equal(checks.internal_link, "pass");
 
 // Blocks become Markdown with every line break in place.
 const md = blocksToMarkdown([
-  { kind: "paragraph", text: "Opening   paragraph\nwith a break.", items: [], rows: [] },
-  { kind: "heading2", text: "## The **Landscape**", items: [], rows: [] },
-  { kind: "numbered", text: "", items: ["1. **Slow placement:** weeks pass.", "**Markups:** high."], rows: [] },
-  { kind: "quote", text: "“Execution beats capacity.”", items: [], rows: [] },
-  { kind: "bullets", text: "", items: ["- **Email our team:** [support@epcmst.com](mailto:support@epcmst.com)"], rows: [] },
-  { kind: "table", text: "", items: [], rows: [{ cells: ["Model", "Speed"] }, { cells: ["Agency | firm", "Slow"] }, { cells: ["EPCMst"] }] },
-  { kind: "heading3", text: "", items: [], rows: [] },
+  { kind: "paragraph", text: "Opening   paragraph\nwith a break.", points: [] },
+  { kind: "heading2", text: "## The **Landscape**", points: [] },
+  { kind: "numbered", text: "", points: ["1. **Slow placement:** weeks pass.", "**Markups:** high."] },
+  { kind: "quote", text: "“Execution beats capacity.”", points: [] },
+  { kind: "bullets", text: "", points: ["- **Email our team:** [support@epcmst.com](mailto:support@epcmst.com)"] },
+  { kind: "table", text: "", points: ["| Model | Speed |", "| --- | --- |", "Agency / firm | Slow", "EPCMst"] },
+  { kind: "heading3", text: "", points: [] },
 ]);
 assert.equal(md, [
   "Opening paragraph with a break.",
@@ -125,6 +125,15 @@ assert.equal(md, [
   "- **Email our team:** [support@epcmst.com](mailto:support@epcmst.com)",
   "| Model | Speed |\n| --- | --- |\n| Agency / firm | Slow |\n| EPCMst |  |",
 ].join("\n\n"));
+
+// A sloppy answer is tidied, not refused: missing fields, odd kinds, wrong types.
+const sloppy = draftAiSchema.parse({ meta_description: null, tags: ["CAPEX Risk", 7], blocks: [
+  { kind: "Heading", text: "Landscape" }, { kind: "list", points: ["a", null, "b"] }, { kind: "mystery", text: 42 }, { text: "No kind" } ] });
+assert.deepEqual(sloppy.blocks.map((b) => b.kind), ["heading2", "bullets", "paragraph", "paragraph"]);
+assert.deepEqual(sloppy.blocks[1].points, ["a", "b"]);
+assert.equal(sloppy.meta_description, "");
+assert.deepEqual(sloppy.tags, ["CAPEX Risk"]);
+assert.ok(!draftAiSchema.safeParse({ meta_description: "x", tags: [], blocks: [] }).success, "an empty article is still refused");
 
 // Text that lost its line breaks (every break became two spaces) gets them back.
 const flat = "Opening paragraph about cost control in Alberta, long enough to look like a real article body. ".repeat(4) +

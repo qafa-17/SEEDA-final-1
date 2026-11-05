@@ -16,11 +16,12 @@ import { HeadlinePanel } from "./headline-panel";
 import { PlannedArticles } from "./planned-articles";
 import { storedHeadlines } from "@/lib/drafts/headlines";
 import { DRAFT_LIMITS } from "@/lib/drafts/style";
+import { draftUsage } from "@/lib/drafts/usage";
 
 export const metadata: Metadata = { title: "Ideas" };
 
 // Writing a draft can take the AI up to a minute or two.
-export const maxDuration = 120;
+export const maxDuration = 200;
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
@@ -44,7 +45,7 @@ const HEADLINE_COLUMNS = "id, headlines, created_at, requested_by, requester:pro
 type HeadlineRow = { id: string; headlines: unknown; created_at: string; requested_by: string | null; requester: { full_name: string } | null };
 
 export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
-  await requireActiveUser();
+  const user = await requireActiveUser();
   const sp = await searchParams;
   const searchId = z.uuid().optional().catch(undefined).parse(first(sp.search) || undefined);
   const presetKeyword = (first(sp.keyword) ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
@@ -69,7 +70,7 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
           : supabase.from("draft_requests").select(HEADLINE_COLUMNS).eq("search_id", searchId).eq("kind", "headlines").eq("status", "ok").order("created_at", { ascending: false }).limit(1)
         ).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    supabase.rpc("draft_request_usage").single(),
+    draftUsage(supabase, user.id),
     supabase.from("service_areas").select("slug, label"),
     supabase.from("content_types").select("slug, label"),
   ]);
@@ -98,9 +99,9 @@ export default async function IdeasPage({ searchParams }: PageProps<"/ideas">) {
   const savedHeadlines = headlineRow && headlineList?.success && headlineList.data.length
     ? { requestId: headlineRow.id, headlines: headlineList.data, byline: `suggested for ${who(headlineRow)} ${timeAgo(headlineRow.created_at, now)}` }
     : null;
-  const draftUsage = draftUsageRes.data as { drafts_today: number; drafts_this_month: number } | null;
-  const allowance = draftUsage
-    ? `You have ${Math.max(0, DRAFT_LIMITS.draftsPerPersonPerDay - Number(draftUsage.drafts_today))} of ${DRAFT_LIMITS.draftsPerPersonPerDay} drafts left today; the team has written ${Number(draftUsage.drafts_this_month)} of ${DRAFT_LIMITS.draftsTeamPerMonth} this month.`
+  const used = draftUsageRes;
+  const allowance = used
+    ? `You have ${Math.max(0, DRAFT_LIMITS.draftsPerPersonPerDay - used.draftsToday)} of ${DRAFT_LIMITS.draftsPerPersonPerDay} drafts left today; the team has written ${used.draftsMonth} of ${DRAFT_LIMITS.draftsTeamPerMonth} this month. Attempts that fail don't count.`
     : "";
   const labels = (rows: { slug: string; label: string }[] | null) => Object.fromEntries((rows ?? []).map((r) => [r.slug, r.label]));
 
