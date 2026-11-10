@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 // Fonts are self-hosted from npm: no request to Google at build or run time.
 import "@fontsource-variable/dm-sans";
 import "@fontsource-variable/sora";
 import { brand } from "@/config/brand";
+import { ServiceWorker } from "@/components/service-worker";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,6 +11,18 @@ export const metadata: Metadata = {
   description: brand.tagline,
   // This is an internal tool: keep it out of search results.
   robots: { index: false, follow: false },
+  // Installed on a phone: the app's name, its home-screen icon, and full screen on iPhone.
+  applicationName: "SEEDA",
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "SEEDA", statusBarStyle: "default" },
+};
+
+// The phone's status bar matches the page, in both themes.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#14111f" },
+  ],
 };
 
 // Only the two known values are ever applied, whatever is in storage.
@@ -24,7 +37,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Runs before the first paint, so a saved dark theme never flashes light. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        {children}
+        <ServiceWorker />
+      </body>
     </html>
   );
 }

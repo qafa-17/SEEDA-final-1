@@ -1,3 +1,4 @@
+import { InstallAppButton } from "@/components/install-app-button";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
@@ -50,6 +51,32 @@ export default async function SettingsPage() {
           </dl>
         </section>
       </div>
+      <section aria-labelledby="install-app" className="mt-6 rounded-lg border border-border bg-surface p-5">
+        <h2 id="install-app" className="font-semibold">Install the hub on your phone</h2>
+        <p className="mt-1 text-sm text-muted">
+          It opens full screen from your home screen, like an app. Open this site on your phone first, signed in.
+        </p>
+        <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+          <div>
+            <h3 className="font-medium">iPhone (Safari)</h3>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-muted">
+              <li>Tap the Share button.</li>
+              <li>Tap <span className="font-medium text-foreground">Add to Home Screen</span>.</li>
+              <li>Tap <span className="font-medium text-foreground">Add</span>.</li>
+            </ol>
+          </div>
+          <div>
+            <h3 className="font-medium">Android (Chrome)</h3>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-muted">
+              <li>Tap the &#8942; menu.</li>
+              <li>Tap <span className="font-medium text-foreground">Install app</span> (or Add to Home screen).</li>
+              <li>Tap <span className="font-medium text-foreground">Install</span>.</li>
+            </ol>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-muted">On a computer, Chrome and Edge show an install button at the right end of the address bar.</p>
+        <InstallAppButton />
+      </section>
       <section aria-labelledby="danger-zone" className="mt-6 rounded-lg border border-danger/30 bg-surface p-5">
         <h2 id="danger-zone" className="font-semibold text-danger">Delete account</h2>
         <div className="mt-3">
