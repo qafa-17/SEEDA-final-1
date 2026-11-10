@@ -2,16 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SignUpForm } from "../forms";
 import { ProviderButtons, OrDivider } from "../provider-buttons";
+import { isInApp } from "@/lib/app-shell";
 
 export const metadata: Metadata = { title: "Create account" };
 
-export default function SignupPage() {
+export default async function SignupPage() {
+  const inApp = await isInApp();
   return (
     <>
       <h1 className="font-display text-3xl font-bold tracking-tight">Create your account</h1>
       <p className="mt-2 text-muted">Take an article from a Google Doc to a live page, with your team. An approver lets new people in.</p>
-      <ProviderButtons row />
-      <OrDivider text="or sign up with email" />
+      {inApp ? null : (
+        <>
+          <ProviderButtons row />
+          <OrDivider text="or sign up with email" />
+        </>
+      )}
       <SignUpForm />
       <p className="mt-6 text-center text-sm text-muted">
         Already have an account?{" "}

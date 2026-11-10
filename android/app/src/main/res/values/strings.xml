@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SEEDA</string>
+    <string name="title_activity_main">SEEDA</string>
+    <string name="package_name">ca.mru.seedahub</string>
+    <string name="custom_url_scheme">ca.mru.seedahub</string>
+</resources>

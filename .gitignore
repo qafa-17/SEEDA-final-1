@@ -40,3 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
+
+# Android/iOS signing keys: never commit (back them up somewhere safe instead)
+*.jks
+*.keystore
+*.p12
+*.mobileprovision

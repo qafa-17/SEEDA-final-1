@@ -3,12 +3,14 @@ import Link from "next/link";
 import { FormMessage } from "@/components/form-fields";
 import { SignInForm } from "../forms";
 import { ProviderButtons, OrDivider } from "../provider-buttons";
+import { isInApp } from "@/lib/app-shell";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
   const next = typeof params.next === "string" ? params.next : undefined;
+  const inApp = await isInApp();
   return (
     <>
       <h1 className="font-display text-3xl font-bold tracking-tight">Welcome back</h1>
@@ -34,8 +36,16 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           />
         </div>
       ) : null}
-      <ProviderButtons next={next} />
-      <OrDivider />
+      {inApp ? (
+        <p className="mt-6 rounded-md border border-border bg-surface px-4 py-3 text-sm text-muted">
+          In the app, sign in with your email and password. Google and GitHub sign-in only work in a web browser. If you joined with Google or GitHub, use &ldquo;Forgot your password?&rdquo; below once to set a password.
+        </p>
+      ) : (
+        <>
+          <ProviderButtons next={next} />
+          <OrDivider />
+        </>
+      )}
       <SignInForm next={next} />
       <p className="mt-4 text-center text-sm">
         <Link href="/forgot-password" className="font-medium text-primary underline underline-offset-2">

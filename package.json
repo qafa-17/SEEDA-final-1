@@ -13,6 +13,9 @@
     "map:build": "tsx scripts/map/build.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/ios": "^8.6.0",
     "@fontsource-variable/dm-sans": "^5.3.0",
     "@fontsource-variable/sora": "^5.3.0",
     "@supabase/ssr": "^0.12.7",
@@ -29,6 +32,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.0",
     "@tailwindcss/postcss": "^4",
     "@types/d3-geo": "^3.1.1",
     "@types/node": "^20",
