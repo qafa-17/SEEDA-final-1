@@ -5,7 +5,7 @@
 // error. Nothing else is cached. Every page shows signed-in, live data, so
 // serving an old copy could show someone stale or private information.
 
-const CACHE = "seeda-offline-v1";
+const CACHE = "seeda-offline-v2";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png"];
 
