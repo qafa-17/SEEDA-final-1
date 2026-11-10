@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
-  Design tokens: Content Operations identity.
+  Design tokens: SEEDA Hub identity.
   Two themes share the same token names, so every component follows the
   theme without knowing about it. Every text/background pair in both
   themes meets WCAG AA contrast (4.5:1 or better).

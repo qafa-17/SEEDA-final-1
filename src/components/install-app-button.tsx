@@ -28,7 +28,7 @@ export function InstallAppButton() {
     };
   }, []);
 
-  if (installed) return <p className="mt-4 text-sm font-medium text-success">Installed. You&apos;ll find SEEDA with your other apps.</p>;
+  if (installed) return <p className="mt-4 text-sm font-medium text-success">Installed. You&apos;ll find SEEDA Hub with your other apps.</p>;
   if (!prompt) return null;
   return (
     <button

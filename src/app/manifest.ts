@@ -5,8 +5,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "SEEDA Content Operations Hub",
-    short_name: "SEEDA",
+    name: "SEEDA Hub",
+    short_name: "SEEDA Hub",
     description: "Import, review, approve and publish EPCMst Knowledge Hub articles.",
     start_url: "/dashboard",
     scope: "/",

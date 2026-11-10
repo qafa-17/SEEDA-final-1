@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   // This is an internal tool: keep it out of search results.
   robots: { index: false, follow: false },
   // Installed on a phone: the app's name, its home-screen icon, and full screen on iPhone.
-  applicationName: "SEEDA",
+  applicationName: brand.name,
   icons: { apple: "/icons/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "SEEDA", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: brand.name, statusBarStyle: "default" },
 };
 
 // The phone's status bar matches the page, in both themes.

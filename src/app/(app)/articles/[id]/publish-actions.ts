@@ -68,7 +68,7 @@ export async function publishArticle(_prev: PublishState, fd: FormData): Promise
       content: file.content,
       branchName: `publish/${a.slug}-${jobId.slice(0, 8)}`,
       title: file.frontmatter.title,
-      body: `Published from the EPCMst Content Operations hub by ${user.fullName || "an approver"}.\n\nAdds \`${file.path}\`. Once merged, the page goes live at ${site}/resources/${a.slug}.`,
+      body: `Published from SEEDA Hub by ${user.fullName || "an approver"}.\n\nAdds \`${file.path}\`. Once merged, the page goes live at ${site}/resources/${a.slug}.`,
       onOpened: async (pr) => {
         await supabase.rpc("update_publish_job", { p_job_id: jobId, p_state: "pr_open", p_branch: `publish/${a.slug}-${jobId.slice(0, 8)}`, p_pr_number: pr.number, p_pr_url: pr.url });
       },

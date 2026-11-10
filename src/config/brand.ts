@@ -1,6 +1,6 @@
 // Single place for product identity.
 export const brand = {
-  name: "Content Operations",
+  name: "SEEDA Hub",
   shortName: "S",
   tagline: "From a finished Google Doc to a live, findable Knowledge Hub page.",
   client: "EPCMst",
