@@ -1,5 +1,5 @@
 /**
- * Synthetic data generator for Content Operations.
+ * Synthetic data generator for SEEDA Hub.
  *
  *   npx tsx scripts/seed/generate.ts            # 150 articles (default)
  *   ARTICLES=300 npx tsx scripts/seed/generate.ts

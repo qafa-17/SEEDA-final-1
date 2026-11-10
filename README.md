@@ -1,4 +1,4 @@
-# Content Operations (SEEDA · EPCMst)
+# SEEDA Hub (Content Operations · EPCMst)
 
 A tool for EPCMst's non-technical publishers. It takes a finished article from Google Drive, checks its metadata against the Knowledge Hub rules, sends it through approval, and publishes it as a GitHub pull request on the Astro site. Then it confirms the page is live and listed in the sitemap.
 
